@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PNW Canopy Height Explorer</title>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0c0e13;
+    color: #d0d4dc;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ---- Map ---- */
+  #map-wrap { flex:1; position:relative; }
+  #map { width:100%; height:100%; }
+
+  /* Desaturate map tiles */
+  .leaflet-tile-pane { filter: saturate(0.3) brightness(0.85); }
+  .leaflet-control-attribution { font-size:10px; opacity:.6; }
+
+  /* ---- Sidebar ---- */
+  #sidebar {
+    width: 380px;
+    background: #11131a;
+    border-left: 1px solid #1e2230;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  #sidebar h2 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 16px 16px 8px;
+    color: #e4e8f0;
+  }
+  .section { padding: 8px 16px 12px; border-bottom:1px solid #1e2230; }
+  .section-label { font-size:11px; text-transform:uppercase; color:#5a6070; letter-spacing:.08em; margin-bottom:6px; }
+
+  /* Stats grid */
+  .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .stat { background:#181b24; border-radius:6px; padding:8px 10px; }
+  .stat .val { font-size:18px; font-weight:700; color:#e4e8f0; }
+  .stat .lbl { font-size:10px; color:#5a6070; text-transform:uppercase; }
+
+  /* Error bar chart */
+  #error-chart { width:100%; height:120px; }
+
+  /* Tree list */
+  #tree-list { list-style:none; max-height:55vh; overflow-y:auto; }
+  #tree-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  #tree-list li:hover { background:#1e2230; }
+  .rank { width:26px; text-align:right; color:#5a6070; font-size:11px; }
+  .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .tree-height { font-weight:700; color:#e4e8f0; }
+  .tree-tier { font-size:11px; color:#5a6070; margin-left:auto; }
+  .tree-error { font-size:10px; color:#444a5a; }
+
+  /* Loading state */
+  #loading {
+    display:none;
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    background:rgba(12,14,19,.9); color:#8090a0; padding:18px 28px;
+    border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:13px;
+    z-index:1000; pointer-events:none;
+  }
+  #loading.active { display:block; }
+
+  /* Hint */
+  #hint {
+    position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+    background:rgba(12,14,19,.85); color:#6a7a8a; padding:8px 16px;
+    border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:12px;
+    z-index:999; pointer-events:none;
+    transition: opacity .4s;
+  }
+</style>
+</head>
+<body>
+
+<div id="map-wrap">
+  <div id="map"></div>
+  <div id="loading">Analyzing canopy…</div>
+  <div id="hint">Click anywhere on the map to analyze tree canopy</div>
+</div>
+
+<div id="sidebar">
+  <h2>PNW Canopy Height Explorer</h2>
+
+  <div class="section" id="stats-section">
+    <div class="section-label">Statistics</div>
+    <div class="stats-grid">
+      <div class="stat"><div class="val" id="stat-max">—</div><div class="lbl">Max height</div></div>
+      <div class="stat"><div class="val" id="stat-mean">—</div><div class="lbl">Mean height</div></div>
+      <div class="stat"><div class="val" id="stat-trees">—</div><div class="lbl">Trees found</div></div>
+      <div class="stat"><div class="val" id="stat-area">—</div><div class="lbl">Area (km²)</div></div>
+    </div>
+  </div>
+
+  <div class="section" id="chart-section">
+    <div class="section-label">Height Distribution (±2.8 m MAE)</div>
+    <canvas id="error-chart"></canvas>
+  </div>
+
+  <div class="section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+    <div class="section-label">Tree Rankings</div>
+    <ul id="tree-list"></ul>
+  </div>
+</div>
+
+<script>
+// ---- Map setup ----
+window._map = L.map('map', {
+  center: [46.8, -121.7],
+  zoom: 8,
+  maxBounds: [[41, -126], [50, -115]],
+  zoomControl: true,
+});
+const map = window._map;
+
+L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 17,
+  attribution: '© OpenTopoMap contributors',
+}).addTo(map);
+
+let markers = [];
+let overlayLayer = null;
+let clickMarker = null;
+
+const API = '';  // same origin when served via Flask; adjust if needed
+
+// ---- Click handler ----
+map.on('click', async (e) => {
+  const { lat, lng } = e.latlng;
+  if (lat < 41 || lat > 50 || lng < -126 || lng > -115) return;
+
+  document.getElementById('hint').style.opacity = '0';
+  const loading = document.getElementById('loading');
+  loading.classList.add('active');
+
+  // Clear previous
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  if (overlayLayer) { map.removeLayer(overlayLayer); overlayLayer = null; }
+  if (clickMarker) { map.removeLayer(clickMarker); clickMarker = null; }
+
+  clickMarker = L.circleMarker([lat, lng], {
+    radius: 6, color: '#ffffff', weight: 2, fillColor: '#ffffff', fillOpacity: 0.3,
+  }).addTo(map);
+
+  try {
+    const resp = await fetch(`${API}/api/analyze?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}&window=1000`);
+    const data = await resp.json();
+
+    if (data.error) { alert(data.error); return; }
+
+    // Stats
+    document.getElementById('stat-max').textContent = data.stats.max_height + ' m';
+    document.getElementById('stat-mean').textContent = data.stats.mean_height + ' m';
+    document.getElementById('stat-trees').textContent = data.stats.n_trees;
+    document.getElementById('stat-area').textContent = (data.stats.area_m2 / 1e6).toFixed(2);
+
+    // Overlay
+    if (data.overlay_key && data.overlay_bounds) {
+      const b = data.overlay_bounds;
+      overlayLayer = L.imageOverlay(
+        `${API}/api/overlay?key=${data.overlay_key}`,
+        [[b.sw[0], b.sw[1]], [b.ne[0], b.ne[1]]],
+        { opacity: 0.6 }
+      ).addTo(map);
+    }
+
+    // Markers
+    data.trees.forEach(t => {
+      const m = L.circleMarker([t.lat, t.lon], {
+        radius: Math.max(4, Math.min(10, t.height_m / 10)),
+        color: t.colour,
+        weight: 1.5,
+        fillColor: t.colour,
+        fillOpacity: 0.5,
+      }).addTo(map);
+      m.bindTooltip(`#${t.rank} — ${t.height_m} m (${t.tier})`, { className: 'tree-tip' });
+      markers.push(m);
+    });
+
+    // Tree list
+    const list = document.getElementById('tree-list');
+    list.innerHTML = '';
+    data.trees.slice(0, 200).forEach(t => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <span class="rank">${t.rank}</span>
+        <span class="dot" style="background:${t.colour}"></span>
+        <span class="tree-height">${t.height_m} m</span>
+        <span class="tree-error">±${t.error_m}</span>
+        <span class="tree-tier">${t.tier}</span>
+      `;
+      li.addEventListener('click', () => map.flyTo([t.lat, t.lon], 16));
+      list.appendChild(li);
+    });
+
+    // Error bar chart
+    drawChart(data.trees);
+
+  } catch (err) {
+    alert('Analysis failed: ' + err.message);
+  } finally {
+    loading.classList.remove('active');
+  }
+});
+
+// ---- Simple canvas bar chart with error bars ----
+function drawChart(trees) {
+  const canvas = document.getElementById('error-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.parentElement.clientWidth - 32;
+  const H = canvas.height = 120;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!trees.length) return;
+
+  // Bin into tiers
+  const tierNames = ['Common', 'Tall', 'Regional', 'National', 'Global'];
+  const tierColours = { Common:'#6688aa', Tall:'#44bb44', Regional:'#ffcc00', National:'#ff8800', Global:'#ff4444' };
+  const counts = {};
+  tierNames.forEach(t => counts[t] = 0);
+  trees.forEach(t => counts[t.tier] = (counts[t.tier] || 0) + 1);
+
+  const maxCount = Math.max(...Object.values(counts), 1);
+  const barW = (W - 20) / tierNames.length;
+  const pad = 4;
+
+  tierNames.forEach((tier, i) => {
+    const x = 10 + i * barW + pad;
+    const h = (counts[tier] / maxCount) * (H - 30);
+    const y = H - 18 - h;
+
+    ctx.fillStyle = tierColours[tier];
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(x, y, barW - pad * 2, h);
+    ctx.globalAlpha = 1;
+
+    // Label
+    ctx.fillStyle = '#5a6070';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(tier.slice(0, 3), x + (barW - pad * 2) / 2, H - 4);
+
+    // Count on top
+    if (counts[tier]) {
+      ctx.fillStyle = '#d0d4dc';
+      ctx.fillText(counts[tier], x + (barW - pad * 2) / 2, y - 4);
+    }
+  });
+}
+</script>
+</body>
+</html>

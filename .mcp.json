@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dev-server": {
+      "command": "node",
+      "args": ["mcp/dev-server/index.js"]
+    }
+  }
+}

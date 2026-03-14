@@ -2,12 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-const STATE_DIR = path.join(os.homedir(), '.claude');
-const STATE_FILE = path.join(STATE_DIR, 'dev-servers.json');
+function getStatePath() {
+  if (process.env.DEV_SERVER_STATE_FILE) return process.env.DEV_SERVER_STATE_FILE;
+  return path.join(os.homedir(), '.claude', 'dev-servers.json');
+}
 
 function loadState() {
   try {
-    const data = fs.readFileSync(STATE_FILE, 'utf8');
+    const data = fs.readFileSync(getStatePath(), 'utf8');
     return JSON.parse(data);
   } catch {
     return { servers: {} };
@@ -15,10 +17,11 @@ function loadState() {
 }
 
 function saveState(state) {
-  fs.mkdirSync(STATE_DIR, { recursive: true });
-  const tmp = STATE_FILE + '.tmp';
+  const stateFile = getStatePath();
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true });
+  const tmp = stateFile + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
-  fs.renameSync(tmp, STATE_FILE);
+  fs.renameSync(tmp, stateFile);
 }
 
 function isProcessAlive(pid) {

@@ -420,7 +420,9 @@ let markers = [];
 let overlayLayer = null;
 let clickMarker = null;
 
-const API = '';  // same origin when served via Flask; adjust if needed
+// Derive API base from current page path so it works behind subpath proxies
+// e.g. /tallest-trees -> /tallest-trees, / -> (empty string)
+const API = window.location.pathname.replace(/\/+$/, '');
 
 // ---- Click handler ----
 map.on('click', async (e) => {

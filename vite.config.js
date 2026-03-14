@@ -24,6 +24,10 @@ export default defineConfig({
     }),
     proxy: {
       '/api': 'http://localhost:5111',
+      '/tallest-trees/api': {
+        target: 'http://localhost:5111',
+        rewrite: (p) => p.replace(/^\/tallest-trees/, ''),
+      },
     },
   },
 })

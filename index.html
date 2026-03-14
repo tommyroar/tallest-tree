@@ -61,7 +61,7 @@
     max-height: 45vh;
     overflow-y: auto;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0;
     transition: max-height .3s ease, opacity .2s ease;
   }
@@ -90,23 +90,18 @@
   /* Error bar chart */
   #error-chart { width:100%; height:120px; }
 
-  /* Tree list */
-  #tree-list { list-style:none; max-height:30vh; overflow-y:auto; }
-  #tree-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 10px;
-    border-radius: 6px;
+  /* Forest silhouette visualization */
+  #forest-section { flex: 0 0 50%; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; }
+  #forest-viz { width: 100%; flex: 1 1 auto; display: block; background: #0c0e13; }
+  #forest-viz .tree-sil {
     cursor: pointer;
-    transition: background .15s;
+    transition: opacity .15s, filter .15s;
   }
-  #tree-list li:hover { background:#1e2230; }
-  .rank { width:26px; text-align:right; color:#5a6070; font-size:11px; }
+  #forest-viz .tree-sil:hover { filter: brightness(2); }
+  #forest-viz .tree-sil.highlighted { filter: brightness(2.5) drop-shadow(0 0 6px rgba(255,255,255,0.5)); }
+
+  /* Keep .dot for ground-truth candidates */
   .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-  .tree-height { font-weight:700; color:#e4e8f0; }
-  .tree-tier { font-size:11px; color:#5a6070; margin-left:auto; }
-  .tree-error { font-size:10px; color:#444a5a; }
 
   /* ---- Ground Truth Mode ---- */
   #gt-toggle {
@@ -323,9 +318,9 @@
       <canvas id="error-chart"></canvas>
     </div>
 
-    <div class="section" style="overflow:hidden;display:flex;flex-direction:column;">
-      <div class="section-label">Tree Rankings</div>
-      <ul id="tree-list"></ul>
+    <div class="section" id="forest-section">
+      <div class="section-label">Forest Profile</div>
+      <svg id="forest-viz" preserveAspectRatio="xMidYMax meet"></svg>
     </div>
   </div>
 </div>
@@ -475,24 +470,12 @@ map.on('click', async (e) => {
         fillOpacity: 0.5,
       }).addTo(map);
       m.bindTooltip(`#${t.rank} — ${t.height_m} m (${t.tier})`, { className: 'tree-tip' });
+      m.on('click', () => highlightTree(t));
       markers.push(m);
     });
 
-    // Tree list
-    const list = document.getElementById('tree-list');
-    list.innerHTML = '';
-    data.trees.slice(0, 200).forEach(t => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <span class="rank">${t.rank}</span>
-        <span class="dot" style="background:${t.colour}"></span>
-        <span class="tree-height">${t.height_m} m</span>
-        <span class="tree-error">±${t.error_m}</span>
-        <span class="tree-tier">${t.tier}</span>
-      `;
-      li.addEventListener('click', () => map.flyTo([t.lat, t.lon], 16));
-      list.appendChild(li);
-    });
+    // Forest profile visualization
+    renderForest(data.trees, lat, lng);
 
     // Error bar chart
     drawChart(data.trees);
@@ -506,6 +489,225 @@ map.on('click', async (e) => {
     loading.classList.remove('active');
   }
 });
+
+// ---- Tree silhouette definitions (PNW conifers) ----
+const TREE_SILHOUETTES = [
+  { // Douglas Fir — conical, slightly irregular, drooping lower branches
+    id: 'sil-0', vb: '0 0 40 100',
+    path: 'M20 0 L17 12 L12 14 L15 20 L9 24 L13 30 L7 35 L11 40 L5 46 L10 50 L4 56 L9 60 L3 67 L8 72 L2 78 L7 82 L3 88 L17 90 L17 100 L23 100 L23 90 L37 88 L33 82 L38 78 L32 72 L37 67 L31 60 L36 56 L30 50 L35 46 L29 40 L33 35 L27 30 L31 24 L25 20 L28 14 L23 12 Z'
+  },
+  { // Western Red Cedar — narrow pyramidal, buttressed trunk, drooping branches
+    id: 'sil-1', vb: '0 0 36 100',
+    path: 'M18 0 L16 10 L11 16 L14 22 L8 30 L12 35 L6 44 L10 48 L4 57 L9 62 L3 70 L8 74 L4 82 L14 88 L12 92 L12 100 L24 100 L24 92 L22 88 L32 82 L28 74 L33 70 L27 62 L32 57 L26 48 L30 44 L24 35 L28 30 L22 22 L25 16 L20 10 Z'
+  },
+  { // Sitka Spruce — broad conical, dense branching
+    id: 'sil-2', vb: '0 0 50 100',
+    path: 'M25 0 L22 8 L16 12 L19 18 L12 24 L16 28 L8 35 L13 38 L5 46 L11 50 L3 58 L9 62 L2 70 L8 74 L1 82 L10 86 L5 90 L18 93 L18 100 L32 100 L32 93 L45 90 L40 86 L49 82 L42 74 L48 70 L41 62 L47 58 L39 50 L45 46 L37 38 L42 35 L34 28 L38 24 L31 18 L34 12 L28 8 Z'
+  },
+  { // Western Hemlock — drooping leader tip, delicate feathery crown
+    id: 'sil-3', vb: '0 0 38 100',
+    path: 'M16 0 L18 3 L19 1 L19 6 L15 12 L18 16 L12 22 L16 26 L10 33 L14 37 L7 44 L12 48 L5 56 L10 60 L4 68 L9 72 L3 80 L8 84 L4 90 L16 93 L16 100 L22 100 L22 93 L34 90 L30 84 L35 80 L29 72 L34 68 L28 60 L33 56 L26 48 L31 44 L24 37 L28 33 L22 26 L26 22 L20 16 L23 12 L19 6 Z'
+  },
+  { // Noble Fir — symmetrical narrow spire
+    id: 'sil-4', vb: '0 0 34 100',
+    path: 'M17 0 L15 10 L11 15 L14 20 L10 27 L13 31 L9 38 L12 42 L8 50 L11 54 L7 62 L10 66 L6 74 L9 78 L5 86 L14 90 L14 100 L20 100 L20 90 L29 86 L25 78 L28 74 L24 66 L27 62 L23 54 L26 50 L22 42 L25 38 L21 31 L24 27 L20 20 L23 15 L19 10 Z'
+  },
+];
+
+// ---- Forest profile rendering ----
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function renderForest(trees, centerLat, centerLon) {
+  const svg = document.getElementById('forest-viz');
+  svg.innerHTML = '';
+
+  const vizTrees = trees.slice(0, 200);
+  if (!vizTrees.length) return;
+
+  // Inject silhouette symbols into defs
+  const defs = document.createElementNS(SVG_NS, 'defs');
+  TREE_SILHOUETTES.forEach(s => {
+    const sym = document.createElementNS(SVG_NS, 'symbol');
+    sym.setAttribute('id', s.id);
+    sym.setAttribute('viewBox', s.vb);
+    const p = document.createElementNS(SVG_NS, 'path');
+    p.setAttribute('d', s.path);
+    sym.appendChild(p);
+    defs.appendChild(sym);
+  });
+  svg.appendChild(defs);
+
+  // Measure container
+  const rect = svg.getBoundingClientRect();
+  const W = rect.width || 300;
+  const H = rect.height || 160;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const SCALE_W = 36;
+  const BOTTOM_H = 16;
+  const TOP_PAD = 6;
+  const FOREST_L = SCALE_W;
+  const FOREST_R = W - SCALE_W;
+  const FOREST_W = FOREST_R - FOREST_L;
+  const GROUND_Y = H - BOTTOM_H;
+
+  // Height calculations
+  const heights = vizTrees.map(t => t.height_m);
+  const maxH = Math.max(...heights);
+  const minH = Math.min(...heights);
+  const pxPerMeter = (GROUND_Y - TOP_PAD) / maxH;
+
+  // Ground line
+  const ground = document.createElementNS(SVG_NS, 'line');
+  ground.setAttribute('x1', FOREST_L);
+  ground.setAttribute('y1', GROUND_Y);
+  ground.setAttribute('x2', FOREST_R);
+  ground.setAttribute('y2', GROUND_Y);
+  ground.setAttribute('stroke', '#1e2230');
+  ground.setAttribute('stroke-width', '1');
+  svg.appendChild(ground);
+
+  // Draw scales on both sides
+  drawForestScale(svg, maxH, pxPerMeter, GROUND_Y, 0, 'right', TOP_PAD);
+  drawForestScale(svg, maxH, pxPerMeter, GROUND_Y, W - SCALE_W, 'left', TOP_PAD);
+
+  // Compass labels along bottom
+  const dirs = ['S', 'W', 'N', 'E', 'S'];
+  dirs.forEach((d, i) => {
+    const x = FOREST_L + (i / (dirs.length - 1)) * FOREST_W;
+    const label = document.createElementNS(SVG_NS, 'text');
+    label.setAttribute('x', x);
+    label.setAttribute('y', H - 2);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('fill', d === 'N' ? '#ff4444' : '#3a3f50');
+    label.setAttribute('font-family', "'JetBrains Mono', monospace");
+    label.setAttribute('font-size', '10');
+    label.setAttribute('font-weight', d === 'N' ? '700' : '400');
+    label.textContent = d;
+    svg.appendChild(label);
+  });
+
+  // Sort ascending by height (painter's algorithm: tallest on top)
+  const sorted = [...vizTrees].sort((a, b) => a.height_m - b.height_m);
+
+  // Forest group
+  const forestG = document.createElementNS(SVG_NS, 'g');
+  forestG.classList.add('forest');
+
+  sorted.forEach(t => {
+    const silIdx = t.rank % TREE_SILHOUETTES.length;
+    const sil = TREE_SILHOUETTES[silIdx];
+    const vbParts = sil.vb.split(' ').map(Number);
+    const aspect = vbParts[2] / vbParts[3];
+
+    const treePxH = t.height_m * pxPerMeter;
+    const treePxW = treePxH * aspect;
+
+    // Compass bearing from center to tree
+    const bearing = bearingBetween(centerLat, centerLon, t.lat, t.lon);
+    // Map bearing so South=0 (left), North=0.5 (center), South=1.0 (right)
+    const xNorm = ((bearing + 180) % 360) / 360;
+    const x = FOREST_L + xNorm * (FOREST_W - treePxW);
+    const y = GROUND_Y - treePxH;
+
+    // Depth shading: shorter = lighter, taller = darker
+    const depthFactor = (t.height_m - minH) / (maxH - minH || 1);
+    const grey = Math.round(80 - depthFactor * 55); // 80 (light) to 25 (dark)
+    const fill = `rgb(${grey},${grey},${grey})`;
+
+    const use = document.createElementNS(SVG_NS, 'use');
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + sil.id);
+    use.setAttribute('x', x);
+    use.setAttribute('y', y);
+    use.setAttribute('width', treePxW);
+    use.setAttribute('height', treePxH);
+    use.setAttribute('fill', fill);
+    use.classList.add('tree-sil');
+    use.dataset.rank = t.rank;
+
+    const title = document.createElementNS(SVG_NS, 'title');
+    title.textContent = `#${t.rank} — ${t.height_m} m (${t.tier})`;
+    use.appendChild(title);
+
+    use.addEventListener('click', (e) => { e.stopPropagation(); highlightTree(t); });
+    forestG.appendChild(use);
+  });
+
+  svg.appendChild(forestG);
+}
+
+function drawForestScale(svg, maxH, pxPerMeter, groundY, offsetX, align, topPad) {
+  const g = document.createElementNS(SVG_NS, 'g');
+
+  // Tick interval
+  let interval = 10;
+  if (maxH > 60) interval = 20;
+  if (maxH > 120) interval = 50;
+
+  const lineX = align === 'right' ? offsetX + 30 : offsetX + 6;
+
+  // Vertical line
+  const line = document.createElementNS(SVG_NS, 'line');
+  line.setAttribute('x1', lineX);
+  line.setAttribute('y1', groundY);
+  line.setAttribute('x2', lineX);
+  line.setAttribute('y2', topPad);
+  line.setAttribute('stroke', '#2a2e3a');
+  line.setAttribute('stroke-width', '1');
+  g.appendChild(line);
+
+  for (let h = 0; h <= maxH; h += interval) {
+    const y = groundY - h * pxPerMeter;
+    if (y < topPad - 2) break;
+
+    // Tick
+    const tick = document.createElementNS(SVG_NS, 'line');
+    const tickDir = align === 'right' ? -1 : 1;
+    tick.setAttribute('x1', lineX);
+    tick.setAttribute('y1', y);
+    tick.setAttribute('x2', lineX + tickDir * 4);
+    tick.setAttribute('y2', y);
+    tick.setAttribute('stroke', '#2a2e3a');
+    tick.setAttribute('stroke-width', '1');
+    g.appendChild(tick);
+
+    // Label
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', align === 'right' ? lineX - 6 : lineX + 8);
+    text.setAttribute('y', y + 3);
+    text.setAttribute('text-anchor', align === 'right' ? 'end' : 'start');
+    text.setAttribute('fill', '#3a3f50');
+    text.setAttribute('font-family', "'JetBrains Mono', monospace");
+    text.setAttribute('font-size', '9');
+    text.textContent = h + 'm';
+    g.appendChild(text);
+  }
+
+  svg.appendChild(g);
+}
+
+function highlightTree(tree) {
+  // Fly map to tree
+  map.flyTo([tree.lat, tree.lon], 16);
+
+  // Flash the corresponding map marker
+  markers.forEach(m => {
+    const ll = m.getLatLng();
+    if (Math.abs(ll.lat - tree.lat) < 0.00001 && Math.abs(ll.lng - tree.lon) < 0.00001) {
+      m.setStyle({ color: '#ffffff', fillColor: '#ffffff', fillOpacity: 0.9, weight: 3 });
+      m.setRadius(14);
+      setTimeout(() => {
+        m.setStyle({ color: tree.colour, fillColor: tree.colour, fillOpacity: 0.5, weight: 1.5 });
+        m.setRadius(Math.max(4, Math.min(10, tree.height_m / 10)));
+      }, 2000);
+    }
+  });
+
+  // Highlight silhouette in SVG
+  document.querySelectorAll('#forest-viz .tree-sil').forEach(el => el.classList.remove('highlighted'));
+  const sil = document.querySelector(`#forest-viz .tree-sil[data-rank="${tree.rank}"]`);
+  if (sil) sil.classList.add('highlighted');
+}
 
 // ---- Simple canvas bar chart with error bars ----
 function drawChart(trees) {

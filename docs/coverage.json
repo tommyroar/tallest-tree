@@ -1,0 +1,22 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "PNW Coverage Area",
+        "description": "Pacific Northwest canopy height analysis bounds (41°N–50°N, 126°W–115°W)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-126, 41],
+          [-115, 41],
+          [-115, 50],
+          [-126, 50],
+          [-126, 41]
+        ]]
+      }
+    }
+  ]
+}

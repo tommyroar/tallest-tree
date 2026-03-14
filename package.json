@@ -7,7 +7,11 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "serve": "scripts/serve.sh",
+    "serve:kill": "scripts/serve.sh --kill",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "repository": {
     "type": "git",
@@ -23,5 +27,10 @@
   "homepage": "https://github.com/tommyroar/tallest-tree#readme",
   "dependencies": {
     "playwright": "^1.58.2"
+  },
+  "devDependencies": {
+    "jsdom": "^28.1.0",
+    "vite": "^8.0.0",
+    "vitest": "^4.1.0"
   }
 }

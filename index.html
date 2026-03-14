@@ -20,9 +20,58 @@
     background: #0c0e13;
     color: #d0d4dc;
     display: flex;
+    flex-direction: column;
     height: 100vh;
     overflow: hidden;
   }
+
+  /* ---- Top Bar ---- */
+  #sidebar {
+    background: #11131a;
+    border-bottom: 1px solid #1e2230;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  #sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s;
+    min-height: 44px;
+  }
+  #sidebar-header:hover { background: #1e2230; }
+  #sidebar h2 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #e4e8f0;
+    margin: 0;
+  }
+  #collapse-btn {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 18px; line-height: 1; padding: 4px 8px; transition: transform .2s;
+    pointer-events: none;
+  }
+  #sidebar.collapsed #collapse-btn { transform: rotate(180deg); }
+  #sidebar-body {
+    max-height: 45vh;
+    overflow-y: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    transition: max-height .3s ease, opacity .2s ease;
+  }
+  #sidebar.collapsed #sidebar-body {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+  .section { padding: 8px 16px 12px; border-top:1px solid #1e2230; }
+  .section-label { font-size:11px; text-transform:uppercase; color:#5a6070; letter-spacing:.08em; margin-bottom:6px; }
 
   /* ---- Map ---- */
   #map-wrap { flex:1; position:relative; }
@@ -31,27 +80,6 @@
   /* Desaturate map tiles */
   .leaflet-tile-pane { filter: saturate(0.3) brightness(0.85); }
   .leaflet-control-attribution { font-size:10px; opacity:.6; }
-
-  /* ---- Sidebar ---- */
-  #sidebar {
-    width: 380px;
-    background: #11131a;
-    border-left: 1px solid #1e2230;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-  }
-  #sidebar h2 {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    padding: 16px 16px 8px;
-    color: #e4e8f0;
-  }
-  .section { padding: 8px 16px 12px; border-bottom:1px solid #1e2230; }
-  .section-label { font-size:11px; text-transform:uppercase; color:#5a6070; letter-spacing:.08em; margin-bottom:6px; }
 
   /* Stats grid */
   .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
@@ -63,7 +91,7 @@
   #error-chart { width:100%; height:120px; }
 
   /* Tree list */
-  #tree-list { list-style:none; max-height:55vh; overflow-y:auto; }
+  #tree-list { list-style:none; max-height:30vh; overflow-y:auto; }
   #tree-list li {
     display: flex;
     align-items: center;
@@ -79,6 +107,121 @@
   .tree-height { font-weight:700; color:#e4e8f0; }
   .tree-tier { font-size:11px; color:#5a6070; margin-left:auto; }
   .tree-error { font-size:10px; color:#444a5a; }
+
+  /* ---- Ground Truth Mode ---- */
+  #gt-toggle {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px; border-top: 1px solid #1e2230;
+    cursor: pointer; user-select: none; transition: background .15s;
+    width: 100%;
+  }
+  #gt-toggle:hover { background: #181b24; }
+  #gt-toggle .toggle-track {
+    width: 36px; height: 20px; border-radius: 10px;
+    background: #2a2e3a; position: relative; transition: background .2s;
+  }
+  #gt-toggle.active .toggle-track { background: #3d8b40; }
+  #gt-toggle .toggle-thumb {
+    width: 16px; height: 16px; border-radius: 50%; background: #d0d4dc;
+    position: absolute; top: 2px; left: 2px; transition: left .2s;
+  }
+  #gt-toggle.active .toggle-thumb { left: 18px; }
+  #gt-toggle .toggle-label { font-size: 12px; color: #8a90a0; }
+  #gt-toggle.active .toggle-label { color: #6dce70; }
+
+  #gt-panel { display: none; }
+  #gt-panel.active { display: block; }
+
+  .gt-section { padding: 10px 16px 12px; border-bottom: 1px solid #1e2230; }
+  .gt-section-label { font-size: 11px; text-transform: uppercase; color: #5a6070; letter-spacing: .08em; margin-bottom: 8px; }
+
+  .gt-candidate {
+    background: #181b24; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;
+    cursor: pointer; transition: background .15s; border: 1px solid transparent;
+  }
+  .gt-candidate:hover { background: #1e2230; }
+  .gt-candidate.selected { border-color: #3d8b40; background: #1a2420; }
+  .gt-candidate .gt-tree-info { display: flex; align-items: center; gap: 8px; }
+  .gt-candidate .gt-rank { color: #5a6070; font-size: 11px; width: 24px; text-align: right; }
+  .gt-candidate .gt-height { font-weight: 700; color: #e4e8f0; }
+  .gt-candidate .gt-tier { font-size: 11px; color: #5a6070; margin-left: auto; }
+  .gt-candidate .gt-detail { font-size: 11px; color: #5a6070; margin-top: 4px; }
+
+  .gt-guidance { background: #181b24; border-radius: 6px; padding: 12px; }
+  .gt-guidance-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .gt-guidance-row:last-child { margin-bottom: 0; }
+  .gt-guidance-label { font-size: 11px; color: #5a6070; }
+  .gt-guidance-value { font-size: 13px; font-weight: 700; color: #e4e8f0; }
+  .gt-guidance-value.bearing { color: #6dce70; }
+
+  .gt-compass {
+    width: 80px; height: 80px; margin: 8px auto;
+    position: relative; border-radius: 50%;
+    border: 2px solid #2a2e3a; background: #0c0e13;
+  }
+  .gt-compass-needle {
+    position: absolute; top: 50%; left: 50%;
+    width: 2px; height: 32px; background: #6dce70;
+    transform-origin: bottom center;
+    border-radius: 1px;
+  }
+  .gt-compass-n { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff4444; font-weight: 700; }
+  .gt-compass-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 6px; height: 6px; border-radius: 50%; background: #d0d4dc; }
+
+  .gt-rf-settings { background: #181b24; border-radius: 6px; padding: 12px; }
+  .gt-rf-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .gt-rf-row:last-child { margin-bottom: 0; }
+  .gt-rf-key { font-size: 11px; color: #5a6070; }
+  .gt-rf-val { font-size: 11px; color: #e4e8f0; font-weight: 500; }
+
+  .gt-form { background: #181b24; border-radius: 6px; padding: 12px; }
+  .gt-form label { display: block; font-size: 11px; color: #5a6070; margin-bottom: 3px; margin-top: 8px; }
+  .gt-form label:first-child { margin-top: 0; }
+  .gt-form input {
+    width: 100%; padding: 6px 8px; border-radius: 4px;
+    border: 1px solid #2a2e3a; background: #0c0e13; color: #e4e8f0;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  .gt-form input:focus { outline: none; border-color: #3d8b40; }
+  .gt-form .gt-calc-btn {
+    margin-top: 12px; width: 100%; padding: 8px;
+    background: #3d8b40; color: #fff; border: none; border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    font-weight: 700; cursor: pointer; transition: background .15s;
+  }
+  .gt-form .gt-calc-btn:hover { background: #4da650; }
+  .gt-form .gt-calc-btn:disabled { background: #2a2e3a; color: #5a6070; cursor: default; }
+
+  .gt-result { background: #1a2420; border: 1px solid #3d8b40; border-radius: 6px; padding: 12px; margin-top: 10px; }
+  .gt-result-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .gt-result-row:last-child { margin-bottom: 0; }
+  .gt-result-label { font-size: 11px; color: #6dce70; }
+  .gt-result-value { font-size: 13px; font-weight: 700; color: #e4e8f0; }
+  .gt-result-delta { font-size: 12px; font-weight: 700; }
+  .gt-result-delta.close { color: #6dce70; }
+  .gt-result-delta.off { color: #ff8800; }
+  .gt-result-delta.far { color: #ff4444; }
+
+  .gt-gps-btn {
+    margin-top: 8px; width: 100%; padding: 7px;
+    background: #1e2230; color: #8a90a0; border: 1px solid #2a2e3a; border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    cursor: pointer; transition: background .15s;
+  }
+  .gt-gps-btn:hover { background: #2a2e3a; }
+  .gt-gps-btn.located { border-color: #3d8b40; color: #6dce70; }
+
+  /* Locate button */
+  .leaflet-control-locate a {
+    display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; font-size: 18px; line-height: 30px;
+    color: #333; text-decoration: none;
+  }
+  .leaflet-control-locate a svg { width: 16px; height: 16px; }
+  .leaflet-control-locate.active a svg { color: #3d8b40; }
+  .leaflet-control-locate.error a svg { color: #ff4444; }
+  @keyframes locate-spin { to { transform: rotate(360deg); } }
+  .leaflet-control-locate a svg.spin { animation: locate-spin .8s linear infinite; }
 
   /* Loading state */
   #loading {
@@ -102,37 +245,106 @@
 </head>
 <body>
 
+<div id="sidebar">
+  <div id="sidebar-header" onclick="togglePanel()">
+    <h2>PNW Canopy Height Explorer</h2>
+    <button id="collapse-btn" aria-label="Collapse panel">&#9650;</button>
+  </div>
+  <div id="sidebar-body">
+
+    <div id="gt-toggle" onclick="event.stopPropagation(); toggleGroundTruth()">
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+      <span class="toggle-label">Ground Truth Mode</span>
+    </div>
+
+    <div id="gt-panel">
+      <div class="gt-section" id="gt-gps-section">
+        <div class="gt-section-label">Your Position</div>
+        <button class="gt-gps-btn" id="gt-gps-btn" onclick="acquireGPS()">Use GPS Location</button>
+        <div id="gt-gps-info" style="font-size:11px; color:#5a6070; margin-top:6px;"></div>
+      </div>
+
+      <div class="gt-section" id="gt-candidates-section">
+        <div class="gt-section-label">Candidate Trees (top 10 by height)</div>
+        <div id="gt-candidates"></div>
+      </div>
+
+      <div class="gt-section" id="gt-nav-section" style="display:none;">
+        <div class="gt-section-label">Navigation to Tree</div>
+        <div class="gt-compass" id="gt-compass">
+          <span class="gt-compass-n">N</span>
+          <div class="gt-compass-needle" id="gt-compass-needle"></div>
+          <div class="gt-compass-center"></div>
+        </div>
+        <div class="gt-guidance" id="gt-guidance"></div>
+      </div>
+
+      <div class="gt-section" id="gt-rf-section" style="display:none;">
+        <div class="gt-section-label">Rangefinder Settings — Vortex Diamondback HD 2000</div>
+        <div class="gt-rf-settings" id="gt-rf-settings"></div>
+      </div>
+
+      <div class="gt-section" id="gt-measure-section" style="display:none;">
+        <div class="gt-section-label">Measurement Entry</div>
+        <div class="gt-form" id="gt-form">
+          <label for="gt-dist-top">LOS Distance to Crown (m)</label>
+          <input type="number" id="gt-dist-top" step="0.1" placeholder="e.g. 85.2" />
+
+          <label for="gt-angle-top">Inclination Angle to Crown (°)</label>
+          <input type="number" id="gt-angle-top" step="0.1" placeholder="e.g. 42.5" />
+
+          <label for="gt-dist-base">LOS Distance to Base (m)</label>
+          <input type="number" id="gt-dist-base" step="0.1" placeholder="e.g. 63.0" />
+
+          <label for="gt-angle-base">Declination Angle to Base (°)</label>
+          <input type="number" id="gt-angle-base" step="0.1" placeholder="e.g. -5.2" />
+
+          <label for="gt-eye-height">Eye Height (m)</label>
+          <input type="number" id="gt-eye-height" step="0.01" value="1.65" />
+
+          <button class="gt-calc-btn" id="gt-calc-btn" onclick="calculateHeight()" disabled>Calculate Tree Height</button>
+        </div>
+        <div id="gt-result"></div>
+      </div>
+    </div>
+
+    <div class="section" id="stats-section">
+      <div class="section-label">Statistics</div>
+      <div class="stats-grid">
+        <div class="stat"><div class="val" id="stat-max">—</div><div class="lbl">Max height</div></div>
+        <div class="stat"><div class="val" id="stat-mean">—</div><div class="lbl">Mean height</div></div>
+        <div class="stat"><div class="val" id="stat-trees">—</div><div class="lbl">Trees found</div></div>
+        <div class="stat"><div class="val" id="stat-area">—</div><div class="lbl">Area (km²)</div></div>
+      </div>
+    </div>
+
+    <div class="section" id="chart-section">
+      <div class="section-label">Height Distribution (±2.8 m MAE)</div>
+      <canvas id="error-chart"></canvas>
+    </div>
+
+    <div class="section" style="overflow:hidden;display:flex;flex-direction:column;">
+      <div class="section-label">Tree Rankings</div>
+      <ul id="tree-list"></ul>
+    </div>
+  </div>
+</div>
+
 <div id="map-wrap">
   <div id="map"></div>
   <div id="loading">Analyzing canopy…</div>
   <div id="hint">Click anywhere on the map to analyze tree canopy</div>
 </div>
 
-<div id="sidebar">
-  <h2>PNW Canopy Height Explorer</h2>
-
-  <div class="section" id="stats-section">
-    <div class="section-label">Statistics</div>
-    <div class="stats-grid">
-      <div class="stat"><div class="val" id="stat-max">—</div><div class="lbl">Max height</div></div>
-      <div class="stat"><div class="val" id="stat-mean">—</div><div class="lbl">Mean height</div></div>
-      <div class="stat"><div class="val" id="stat-trees">—</div><div class="lbl">Trees found</div></div>
-      <div class="stat"><div class="val" id="stat-area">—</div><div class="lbl">Area (km²)</div></div>
-    </div>
-  </div>
-
-  <div class="section" id="chart-section">
-    <div class="section-label">Height Distribution (±2.8 m MAE)</div>
-    <canvas id="error-chart"></canvas>
-  </div>
-
-  <div class="section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
-    <div class="section-label">Tree Rankings</div>
-    <ul id="tree-list"></ul>
-  </div>
-</div>
-
 <script>
+// ---- Panel collapse ----
+function togglePanel() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('collapsed');
+  // Invalidate map size after transition
+  setTimeout(() => map.invalidateSize(), 320);
+}
+
 // ---- Map setup ----
 window._map = L.map('map', {
   center: [46.8, -121.7],
@@ -146,6 +358,63 @@ L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
   maxZoom: 17,
   attribution: '© OpenTopoMap contributors',
 }).addTo(map);
+
+// ---- Locate control ----
+const LocateControl = L.Control.extend({
+  options: { position: 'topleft' },
+  onAdd(map) {
+    const container = L.DomUtil.create('div', 'leaflet-control-locate leaflet-bar');
+    const link = L.DomUtil.create('a', '', container);
+    link.href = '#';
+    link.role = 'button';
+    link.title = 'Show my location';
+    link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+    this._container = container;
+    this._link = link;
+    this._map = map;
+    this._marker = null;
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.on(link, 'click', this._locate, this);
+    return container;
+  },
+  _locate(e) {
+    L.DomEvent.preventDefault(e);
+    const self = this;
+    if (!window.isSecureContext) {
+      self._container.title = 'Geolocation requires HTTPS';
+      self._container.classList.add('error');
+      console.warn('Locate: geolocation requires a secure context (HTTPS or localhost)');
+      return;
+    }
+    if (!navigator.geolocation) {
+      self._container.title = 'Geolocation not supported';
+      self._container.classList.add('error');
+      return;
+    }
+    self._link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        self._map.flyTo([latitude, longitude], 14);
+        self._container.classList.add('active');
+        self._container.classList.remove('error');
+        self._link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+        if (self._marker) self._map.removeLayer(self._marker);
+        self._marker = L.circleMarker([latitude, longitude], {
+          radius: 8, color: '#3d8b40', weight: 2, fillColor: '#3d8b40', fillOpacity: 0.3,
+        }).addTo(self._map).bindTooltip('You', { permanent: true, direction: 'top' });
+      },
+      (err) => {
+        console.warn('Locate failed:', err.message);
+        self._container.classList.add('error');
+        self._container.title = 'Location error: ' + err.message;
+        self._link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  },
+});
+map.addControl(new LocateControl());
 
 let markers = [];
 let overlayLayer = null;
@@ -226,6 +495,9 @@ map.on('click', async (e) => {
     // Error bar chart
     drawChart(data.trees);
 
+    // Ground truth candidates
+    updateCandidates(data.trees);
+
   } catch (err) {
     alert('Analysis failed: ' + err.message);
   } finally {
@@ -277,6 +549,315 @@ function drawChart(trees) {
     }
   });
 }
+
+// ---- Ground Truth Mode ----
+let gtActive = false;
+let gtUserPos = null;      // {lat, lon}
+let gtSelectedTree = null; // tree object from analysis
+let gtTrees = [];          // current analysis trees
+let gtViewMarker = null;
+let gtLineLayer = null;
+
+function toggleGroundTruth() {
+  gtActive = !gtActive;
+  const el = document.getElementById('gt-toggle');
+  const panel = document.getElementById('gt-panel');
+  el.classList.toggle('active', gtActive);
+  panel.classList.toggle('active', gtActive);
+}
+
+function acquireGPS() {
+  const btn = document.getElementById('gt-gps-btn');
+  const info = document.getElementById('gt-gps-info');
+  btn.textContent = 'Acquiring...';
+  btn.disabled = true;
+
+  if (!navigator.geolocation) {
+    info.textContent = 'Geolocation not supported';
+    btn.textContent = 'Use GPS Location';
+    btn.disabled = false;
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      gtUserPos = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      btn.textContent = `${gtUserPos.lat.toFixed(5)}, ${gtUserPos.lon.toFixed(5)}`;
+      btn.classList.add('located');
+      btn.disabled = false;
+      info.textContent = `Accuracy: ±${pos.coords.accuracy.toFixed(0)} m`;
+
+      // Place user marker
+      if (gtViewMarker) map.removeLayer(gtViewMarker);
+      gtViewMarker = L.circleMarker([gtUserPos.lat, gtUserPos.lon], {
+        radius: 8, color: '#6dce70', weight: 2, fillColor: '#6dce70', fillOpacity: 0.3,
+      }).addTo(map).bindTooltip('You', { permanent: true, direction: 'top', className: 'tree-tip' });
+
+      if (gtSelectedTree) updateNavigation();
+    },
+    (err) => {
+      info.textContent = 'GPS error: ' + err.message;
+      btn.textContent = 'Retry GPS';
+      btn.disabled = false;
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+function updateCandidates(trees) {
+  gtTrees = trees;
+  const container = document.getElementById('gt-candidates');
+  container.innerHTML = '';
+
+  // Top 10 candidates: prioritize taller and rarer trees
+  const candidates = trees.slice(0, 10);
+  if (!candidates.length) {
+    container.innerHTML = '<div style="font-size:11px;color:#5a6070;">Run an analysis first</div>';
+    return;
+  }
+
+  candidates.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'gt-candidate';
+    div.dataset.rank = t.rank;
+    div.innerHTML = `
+      <div class="gt-tree-info">
+        <span class="gt-rank">#${t.rank}</span>
+        <span class="dot" style="background:${t.colour}"></span>
+        <span class="gt-height">${t.height_m} m</span>
+        <span class="gt-tier">${t.tier}</span>
+      </div>
+      <div class="gt-detail">${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</div>
+    `;
+    div.addEventListener('click', () => selectCandidate(t, div));
+    container.appendChild(div);
+  });
+}
+
+function selectCandidate(tree, el) {
+  gtSelectedTree = tree;
+
+  // Highlight selection
+  document.querySelectorAll('.gt-candidate').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+
+  // Show navigation, rangefinder, and measurement sections
+  document.getElementById('gt-nav-section').style.display = '';
+  document.getElementById('gt-rf-section').style.display = '';
+  document.getElementById('gt-measure-section').style.display = '';
+  document.getElementById('gt-calc-btn').disabled = false;
+  document.getElementById('gt-result').innerHTML = '';
+
+  updateNavigation();
+  updateRangefinderSettings(tree);
+  map.flyTo([tree.lat, tree.lon], 16);
+}
+
+function bearingBetween(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+            Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+function haversineMeters(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function compassDir(deg) {
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+function updateNavigation() {
+  const t = gtSelectedTree;
+  const guidance = document.getElementById('gt-guidance');
+
+  if (!gtUserPos) {
+    guidance.innerHTML = `
+      <div class="gt-guidance-row">
+        <span class="gt-guidance-label">Enable GPS to see bearing & distance</span>
+      </div>
+    `;
+    // Still show compass pointing north
+    document.getElementById('gt-compass-needle').style.transform = 'translate(-50%, -100%) rotate(0deg)';
+    return;
+  }
+
+  const dist = haversineMeters(gtUserPos.lat, gtUserPos.lon, t.lat, t.lon);
+  const bearing = bearingBetween(gtUserPos.lat, gtUserPos.lon, t.lat, t.lon);
+
+  // Draw line on map
+  if (gtLineLayer) map.removeLayer(gtLineLayer);
+  gtLineLayer = L.polyline([[gtUserPos.lat, gtUserPos.lon], [t.lat, t.lon]], {
+    color: '#6dce70', weight: 2, dashArray: '6,4', opacity: 0.7,
+  }).addTo(map);
+
+  // Compass needle
+  document.getElementById('gt-compass-needle').style.transform = `translate(-50%, -100%) rotate(${bearing}deg)`;
+
+  // Recommended viewing distance: 1-1.5x tree height, minimum 30m
+  const idealDist = Math.max(30, t.height_m * 1.2);
+  const tooClose = dist < 20;
+  const tooFar = dist > 2000; // rangefinder max range
+
+  let distAdvice = '';
+  if (tooClose) distAdvice = 'Too close — back up for accurate angle measurement';
+  else if (tooFar) distAdvice = 'Beyond rangefinder max range (2000 yd)';
+  else if (dist < idealDist * 0.7) distAdvice = 'Move back for a better angle';
+  else if (dist > idealDist * 3) distAdvice = 'Closer will improve accuracy';
+  else distAdvice = 'Good viewing distance';
+
+  guidance.innerHTML = `
+    <div class="gt-guidance-row">
+      <span class="gt-guidance-label">Bearing</span>
+      <span class="gt-guidance-value bearing">${bearing.toFixed(1)}° ${compassDir(bearing)}</span>
+    </div>
+    <div class="gt-guidance-row">
+      <span class="gt-guidance-label">Distance</span>
+      <span class="gt-guidance-value">${dist.toFixed(0)} m</span>
+    </div>
+    <div class="gt-guidance-row">
+      <span class="gt-guidance-label">Ideal Distance</span>
+      <span class="gt-guidance-value">${idealDist.toFixed(0)} m</span>
+    </div>
+    <div class="gt-guidance-row">
+      <span class="gt-guidance-label">Satellite Est.</span>
+      <span class="gt-guidance-value">${t.height_m} m ±${t.error_m}</span>
+    </div>
+    <div style="font-size:10px; color:${tooClose || tooFar ? '#ff8800' : '#6dce70'}; margin-top:6px;">${distAdvice}</div>
+  `;
+}
+
+function updateRangefinderSettings(tree) {
+  const dist = gtUserPos ? haversineMeters(gtUserPos.lat, gtUserPos.lon, tree.lat, tree.lon) : null;
+  const container = document.getElementById('gt-rf-settings');
+
+  // Estimated angle to crown from ideal distance
+  const viewDist = dist || Math.max(30, tree.height_m * 1.2);
+  const estAngle = Math.atan2(tree.height_m, viewDist) * 180 / Math.PI;
+
+  // Vortex Diamondback HD 2000 specific settings
+  const useYards = viewDist > 500;
+  const modeRec = estAngle > 30 ? 'LOS (Line of Sight)' : 'HCD (Angle Compensated)';
+
+  container.innerHTML = `
+    <div class="gt-rf-row">
+      <span class="gt-rf-key">Mode</span>
+      <span class="gt-rf-val">${modeRec}</span>
+    </div>
+    <div class="gt-rf-row">
+      <span class="gt-rf-key">Units</span>
+      <span class="gt-rf-val">Meters</span>
+    </div>
+    <div class="gt-rf-row">
+      <span class="gt-rf-key">Scan Mode</span>
+      <span class="gt-rf-val">ON — hold for continuous</span>
+    </div>
+    <div class="gt-rf-row">
+      <span class="gt-rf-key">Target Priority</span>
+      <span class="gt-rf-val">Last (for distant crowns)</span>
+    </div>
+    <div class="gt-rf-row">
+      <span class="gt-rf-key">Est. Angle to Crown</span>
+      <span class="gt-rf-val">${estAngle.toFixed(1)}°</span>
+    </div>
+    <div style="font-size:10px; color:#5a6070; margin-top:8px; line-height:1.5;">
+      <strong>Procedure:</strong><br/>
+      1. Aim at crown apex, press POWER once — record LOS distance & angle<br/>
+      2. Aim at trunk base, press POWER once — record LOS distance & angle<br/>
+      3. Enter both readings below
+    </div>
+  `;
+}
+
+function calculateHeight() {
+  const distTop = parseFloat(document.getElementById('gt-dist-top').value);
+  const angleTop = parseFloat(document.getElementById('gt-angle-top').value);
+  const distBase = parseFloat(document.getElementById('gt-dist-base').value);
+  const angleBase = parseFloat(document.getElementById('gt-angle-base').value);
+  const eyeH = parseFloat(document.getElementById('gt-eye-height').value) || 1.65;
+
+  if ([distTop, angleTop, distBase, angleBase].some(isNaN)) {
+    document.getElementById('gt-result').innerHTML =
+      '<div style="color:#ff4444; font-size:11px; margin-top:8px;">Fill in all measurement fields</div>';
+    return;
+  }
+
+  const toRad = d => d * Math.PI / 180;
+
+  // Tree height = vertical component to crown + vertical component to base
+  // h_top = distTop * sin(angleTop)  (positive = looking up)
+  // h_base = distBase * sin(angleBase) (negative = looking down, or small positive)
+  // total height = h_top - h_base
+  // If standing level with base: h_base ≈ 0, total ≈ h_top + eyeHeight
+
+  const hTop = distTop * Math.sin(toRad(angleTop));
+  const hBase = distBase * Math.sin(toRad(angleBase));
+  const measuredHeight = hTop - hBase;
+
+  // Horizontal distances for sanity check
+  const horizTop = distTop * Math.cos(toRad(angleTop));
+  const horizBase = distBase * Math.cos(toRad(angleBase));
+
+  const resultDiv = document.getElementById('gt-result');
+
+  if (measuredHeight <= 0 || measuredHeight > 200) {
+    resultDiv.innerHTML =
+      '<div style="color:#ff4444; font-size:11px; margin-top:8px;">Result out of range — check angle signs (up = positive, down = negative)</div>';
+    return;
+  }
+
+  // Compare with satellite
+  const satH = gtSelectedTree ? gtSelectedTree.height_m : 0;
+  const delta = measuredHeight - satH;
+  const absDelta = Math.abs(delta);
+  let deltaClass = 'close';
+  if (absDelta > 10) deltaClass = 'far';
+  else if (absDelta > 5) deltaClass = 'off';
+
+  let deltaLabel = delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
+
+  resultDiv.innerHTML = `
+    <div class="gt-result">
+      <div class="gt-result-row">
+        <span class="gt-result-label">Measured Height</span>
+        <span class="gt-result-value">${measuredHeight.toFixed(1)} m</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Satellite Estimate</span>
+        <span class="gt-result-value">${satH} m ±${gtSelectedTree ? gtSelectedTree.error_m : '?'}</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Difference</span>
+        <span class="gt-result-delta ${deltaClass}">${deltaLabel} m</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Horiz. Dist (top)</span>
+        <span class="gt-result-value">${horizTop.toFixed(1)} m</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Horiz. Dist (base)</span>
+        <span class="gt-result-value">${horizBase.toFixed(1)} m</span>
+      </div>
+    </div>
+  `;
+}
+
+// Enable calc button when inputs change
+['gt-dist-top', 'gt-angle-top', 'gt-dist-base', 'gt-angle-base'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    document.getElementById('gt-calc-btn').disabled = false;
+  });
+});
 </script>
 </body>
 </html>

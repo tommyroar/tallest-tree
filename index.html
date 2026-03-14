@@ -61,7 +61,7 @@
     max-height: 45vh;
     overflow-y: auto;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 0;
     transition: max-height .3s ease, opacity .2s ease;
   }
@@ -87,92 +87,73 @@
   .stat .val { font-size:18px; font-weight:700; color:#e4e8f0; }
   .stat .lbl { font-size:10px; color:#5a6070; text-transform:uppercase; }
 
-  /* Error bar chart */
-  #error-chart { width:100%; height:120px; }
-
-  /* Tree list */
-  #tree-list { list-style:none; max-height:30vh; overflow-y:auto; }
-  #tree-list li {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 10px;
-    border-radius: 6px;
+  /* Forest silhouette visualization */
+  #forest-section { height: 22vh; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; }
+  #forest-viz { width: 100%; flex: 1 1 auto; min-height: 100px; display: block; background: #0c0e13; }
+  #forest-viz .tree-sil {
     cursor: pointer;
-    transition: background .15s;
+    transition: opacity .15s, filter .15s;
   }
-  #tree-list li:hover { background:#1e2230; }
-  .rank { width:26px; text-align:right; color:#5a6070; font-size:11px; }
-  .dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
-  .tree-height { font-weight:700; color:#e4e8f0; }
-  .tree-tier { font-size:11px; color:#5a6070; margin-left:auto; }
-  .tree-error { font-size:10px; color:#444a5a; }
+  #forest-viz .tree-sil:hover { filter: brightness(2); }
+  #forest-viz .tree-sil.highlighted { filter: brightness(2.5) drop-shadow(0 0 6px rgba(255,255,255,0.5)); }
 
-  /* ---- Ground Truth Mode ---- */
-  #gt-toggle {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 16px; border-top: 1px solid #1e2230;
-    cursor: pointer; user-select: none; transition: background .15s;
-    width: 100%;
+  /* ---- Ground Truth Modal ---- */
+  #gt-modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+    align-items: center; justify-content: center;
   }
-  #gt-toggle:hover { background: #181b24; }
-  #gt-toggle .toggle-track {
-    width: 36px; height: 20px; border-radius: 10px;
-    background: #2a2e3a; position: relative; transition: background .2s;
+  #gt-modal-overlay.active { display: flex; }
+  #gt-modal {
+    background: #11131a; border: 1px solid #1e2230; border-radius: 12px;
+    width: 340px; max-height: 85vh; overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.6);
   }
-  #gt-toggle.active .toggle-track { background: #3d8b40; }
-  #gt-toggle .toggle-thumb {
-    width: 16px; height: 16px; border-radius: 50%; background: #d0d4dc;
-    position: absolute; top: 2px; left: 2px; transition: left .2s;
+  #gt-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid #1e2230;
   }
-  #gt-toggle.active .toggle-thumb { left: 18px; }
-  #gt-toggle .toggle-label { font-size: 12px; color: #8a90a0; }
-  #gt-toggle.active .toggle-label { color: #6dce70; }
-
-  #gt-panel { display: none; }
-  #gt-panel.active { display: block; }
-
-  .gt-section { padding: 10px 16px 12px; border-bottom: 1px solid #1e2230; }
-  .gt-section-label { font-size: 11px; text-transform: uppercase; color: #5a6070; letter-spacing: .08em; margin-bottom: 8px; }
-
-  .gt-candidate {
-    background: #181b24; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;
-    cursor: pointer; transition: background .15s; border: 1px solid transparent;
+  #gt-modal-header .gt-tree-title { font-weight: 700; color: #e4e8f0; font-size: 15px; }
+  #gt-modal-header .gt-tree-tier { font-size: 11px; margin-left: 8px; }
+  #gt-modal-close {
+    background: none; border: none; color: #5a6070; font-size: 20px;
+    cursor: pointer; padding: 0 4px; line-height: 1;
   }
-  .gt-candidate:hover { background: #1e2230; }
-  .gt-candidate.selected { border-color: #3d8b40; background: #1a2420; }
-  .gt-candidate .gt-tree-info { display: flex; align-items: center; gap: 8px; }
-  .gt-candidate .gt-rank { color: #5a6070; font-size: 11px; width: 24px; text-align: right; }
-  .gt-candidate .gt-height { font-weight: 700; color: #e4e8f0; }
-  .gt-candidate .gt-tier { font-size: 11px; color: #5a6070; margin-left: auto; }
-  .gt-candidate .gt-detail { font-size: 11px; color: #5a6070; margin-top: 4px; }
+  #gt-modal-close:hover { color: #d0d4dc; }
 
-  .gt-guidance { background: #181b24; border-radius: 6px; padding: 12px; }
-  .gt-guidance-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  .gt-guidance-row:last-child { margin-bottom: 0; }
-  .gt-guidance-label { font-size: 11px; color: #5a6070; }
-  .gt-guidance-value { font-size: 13px; font-weight: 700; color: #e4e8f0; }
-  .gt-guidance-value.bearing { color: #6dce70; }
+  .gt-section { padding: 12px 16px; border-bottom: 1px solid #1e2230; }
+  .gt-section:last-child { border-bottom: none; }
+  .gt-section-label { font-size: 10px; text-transform: uppercase; color: #5a6070; letter-spacing: .08em; margin-bottom: 8px; }
+
+  .gt-nav-grid { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+  .gt-nav-stats { display: flex; flex-direction: column; gap: 6px; }
+  .gt-row { display: flex; justify-content: space-between; align-items: center; }
+  .gt-label { font-size: 11px; color: #5a6070; }
+  .gt-value { font-size: 13px; font-weight: 700; color: #e4e8f0; }
+  .gt-value.bearing { color: #6dce70; }
 
   .gt-compass {
-    width: 80px; height: 80px; margin: 8px auto;
+    width: 72px; height: 72px;
     position: relative; border-radius: 50%;
-    border: 2px solid #2a2e3a; background: #0c0e13;
+    border: 2px solid #2a2e3a; background: #0c0e13; flex-shrink: 0;
   }
   .gt-compass-needle {
     position: absolute; top: 50%; left: 50%;
-    width: 2px; height: 32px; background: #6dce70;
-    transform-origin: bottom center;
-    border-radius: 1px;
+    width: 2px; height: 28px; background: #6dce70;
+    transform-origin: bottom center; border-radius: 1px;
   }
   .gt-compass-n { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff4444; font-weight: 700; }
   .gt-compass-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 6px; height: 6px; border-radius: 50%; background: #d0d4dc; }
 
-  .gt-rf-settings { background: #181b24; border-radius: 6px; padding: 12px; }
-  .gt-rf-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-  .gt-rf-row:last-child { margin-bottom: 0; }
-  .gt-rf-key { font-size: 11px; color: #5a6070; }
-  .gt-rf-val { font-size: 11px; color: #e4e8f0; font-weight: 500; }
+  .gt-gps-btn {
+    margin-top: 8px; width: 100%; padding: 7px;
+    background: #1e2230; color: #8a90a0; border: 1px solid #2a2e3a; border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    cursor: pointer; transition: background .15s;
+  }
+  .gt-gps-btn:hover { background: #2a2e3a; }
+  .gt-gps-btn.located { border-color: #3d8b40; color: #6dce70; }
 
   .gt-form { background: #181b24; border-radius: 6px; padding: 12px; }
   .gt-form label { display: block; font-size: 11px; color: #5a6070; margin-bottom: 3px; margin-top: 8px; }
@@ -201,15 +182,6 @@
   .gt-result-delta.close { color: #6dce70; }
   .gt-result-delta.off { color: #ff8800; }
   .gt-result-delta.far { color: #ff4444; }
-
-  .gt-gps-btn {
-    margin-top: 8px; width: 100%; padding: 7px;
-    background: #1e2230; color: #8a90a0; border: 1px solid #2a2e3a; border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    cursor: pointer; transition: background .15s;
-  }
-  .gt-gps-btn:hover { background: #2a2e3a; }
-  .gt-gps-btn.located { border-color: #3d8b40; color: #6dce70; }
 
   /* Locate button */
   .leaflet-control-locate a {
@@ -252,60 +224,9 @@
   </div>
   <div id="sidebar-body">
 
-    <div id="gt-toggle" onclick="event.stopPropagation(); toggleGroundTruth()">
-      <div class="toggle-track"><div class="toggle-thumb"></div></div>
-      <span class="toggle-label">Ground Truth Mode</span>
-    </div>
-
-    <div id="gt-panel">
-      <div class="gt-section" id="gt-gps-section">
-        <div class="gt-section-label">Your Position</div>
-        <button class="gt-gps-btn" id="gt-gps-btn" onclick="acquireGPS()">Use GPS Location</button>
-        <div id="gt-gps-info" style="font-size:11px; color:#5a6070; margin-top:6px;"></div>
-      </div>
-
-      <div class="gt-section" id="gt-candidates-section">
-        <div class="gt-section-label">Candidate Trees (top 10 by height)</div>
-        <div id="gt-candidates"></div>
-      </div>
-
-      <div class="gt-section" id="gt-nav-section" style="display:none;">
-        <div class="gt-section-label">Navigation to Tree</div>
-        <div class="gt-compass" id="gt-compass">
-          <span class="gt-compass-n">N</span>
-          <div class="gt-compass-needle" id="gt-compass-needle"></div>
-          <div class="gt-compass-center"></div>
-        </div>
-        <div class="gt-guidance" id="gt-guidance"></div>
-      </div>
-
-      <div class="gt-section" id="gt-rf-section" style="display:none;">
-        <div class="gt-section-label">Rangefinder Settings — Vortex Diamondback HD 2000</div>
-        <div class="gt-rf-settings" id="gt-rf-settings"></div>
-      </div>
-
-      <div class="gt-section" id="gt-measure-section" style="display:none;">
-        <div class="gt-section-label">Measurement Entry</div>
-        <div class="gt-form" id="gt-form">
-          <label for="gt-dist-top">LOS Distance to Crown (m)</label>
-          <input type="number" id="gt-dist-top" step="0.1" placeholder="e.g. 85.2" />
-
-          <label for="gt-angle-top">Inclination Angle to Crown (°)</label>
-          <input type="number" id="gt-angle-top" step="0.1" placeholder="e.g. 42.5" />
-
-          <label for="gt-dist-base">LOS Distance to Base (m)</label>
-          <input type="number" id="gt-dist-base" step="0.1" placeholder="e.g. 63.0" />
-
-          <label for="gt-angle-base">Declination Angle to Base (°)</label>
-          <input type="number" id="gt-angle-base" step="0.1" placeholder="e.g. -5.2" />
-
-          <label for="gt-eye-height">Eye Height (m)</label>
-          <input type="number" id="gt-eye-height" step="0.01" value="1.65" />
-
-          <button class="gt-calc-btn" id="gt-calc-btn" onclick="calculateHeight()" disabled>Calculate Tree Height</button>
-        </div>
-        <div id="gt-result"></div>
-      </div>
+    <div class="section" id="forest-section">
+      <div class="section-label">Forest Profile</div>
+      <svg id="forest-viz" preserveAspectRatio="xMidYMax meet"></svg>
     </div>
 
     <div class="section" id="stats-section">
@@ -318,14 +239,44 @@
       </div>
     </div>
 
-    <div class="section" id="chart-section">
-      <div class="section-label">Height Distribution (±2.8 m MAE)</div>
-      <canvas id="error-chart"></canvas>
-    </div>
+  </div>
+</div>
 
-    <div class="section" style="overflow:hidden;display:flex;flex-direction:column;">
-      <div class="section-label">Tree Rankings</div>
-      <ul id="tree-list"></ul>
+<div id="gt-modal-overlay" onclick="if(event.target===this)closeGtModal()">
+  <div id="gt-modal">
+    <div id="gt-modal-header">
+      <div><span class="gt-tree-title" id="gt-title"></span><span class="gt-tree-tier" id="gt-tier"></span></div>
+      <button id="gt-modal-close" onclick="closeGtModal()">&times;</button>
+    </div>
+    <div class="gt-section">
+      <div class="gt-section-label">Navigation</div>
+      <div class="gt-nav-grid">
+        <div class="gt-nav-stats" id="gt-nav-stats"></div>
+        <div class="gt-compass" id="gt-compass">
+          <span class="gt-compass-n">N</span>
+          <div class="gt-compass-needle" id="gt-compass-needle"></div>
+          <div class="gt-compass-center"></div>
+        </div>
+      </div>
+      <button class="gt-gps-btn" id="gt-gps-btn" onclick="acquireGPS()">Use GPS Location</button>
+      <div id="gt-gps-info" style="font-size:11px; color:#5a6070; margin-top:6px;"></div>
+    </div>
+    <div class="gt-section">
+      <div class="gt-section-label">Rangefinder Measurement</div>
+      <div class="gt-form" id="gt-form">
+        <label for="gt-dist-top">LOS Distance to Crown (m)</label>
+        <input type="number" id="gt-dist-top" step="0.1" placeholder="e.g. 85.2" />
+        <label for="gt-angle-top">Inclination Angle to Crown (&deg;)</label>
+        <input type="number" id="gt-angle-top" step="0.1" placeholder="e.g. 42.5" />
+        <label for="gt-dist-base">LOS Distance to Base (m)</label>
+        <input type="number" id="gt-dist-base" step="0.1" placeholder="e.g. 63.0" />
+        <label for="gt-angle-base">Declination Angle to Base (&deg;)</label>
+        <input type="number" id="gt-angle-base" step="0.1" placeholder="e.g. -5.2" />
+        <label for="gt-eye-height">Eye Height (m)</label>
+        <input type="number" id="gt-eye-height" step="0.01" value="1.65" />
+        <button class="gt-calc-btn" id="gt-calc-btn" onclick="calculateHeight()">Calculate Tree Height</button>
+      </div>
+      <div id="gt-result"></div>
     </div>
   </div>
 </div>
@@ -351,6 +302,7 @@ window._map = L.map('map', {
   zoom: 8,
   maxBounds: [[41, -126], [50, -115]],
   zoomControl: true,
+  tap: false,           // prevent phantom click-through on touch devices (Leaflet #7765)
 });
 const map = window._map;
 
@@ -425,7 +377,11 @@ let clickMarker = null;
 const API = window.location.pathname.replace(/\/+$/, '');
 
 // ---- Click handler ----
+let _flyingTo = false;
+map.on('movestart', () => { _flyingTo = true; });
+map.on('moveend',   () => { setTimeout(() => { _flyingTo = false; }, 200); });
 map.on('click', async (e) => {
+  if (_flyingTo) return;                          // ignore clicks during flyTo
   const { lat, lng } = e.latlng;
   if (lat < 41 || lat > 50 || lng < -126 || lng > -115) return;
 
@@ -475,30 +431,12 @@ map.on('click', async (e) => {
         fillOpacity: 0.5,
       }).addTo(map);
       m.bindTooltip(`#${t.rank} — ${t.height_m} m (${t.tier})`, { className: 'tree-tip' });
+      m.on('click', () => highlightTree(t));
       markers.push(m);
     });
 
-    // Tree list
-    const list = document.getElementById('tree-list');
-    list.innerHTML = '';
-    data.trees.slice(0, 200).forEach(t => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <span class="rank">${t.rank}</span>
-        <span class="dot" style="background:${t.colour}"></span>
-        <span class="tree-height">${t.height_m} m</span>
-        <span class="tree-error">±${t.error_m}</span>
-        <span class="tree-tier">${t.tier}</span>
-      `;
-      li.addEventListener('click', () => map.flyTo([t.lat, t.lon], 16));
-      list.appendChild(li);
-    });
-
-    // Error bar chart
-    drawChart(data.trees);
-
-    // Ground truth candidates
-    updateCandidates(data.trees);
+    // Forest profile visualization
+    renderForest(data.trees, lat, lng);
 
   } catch (err) {
     alert('Analysis failed: ' + err.message);
@@ -507,65 +445,255 @@ map.on('click', async (e) => {
   }
 });
 
-// ---- Simple canvas bar chart with error bars ----
-function drawChart(trees) {
-  const canvas = document.getElementById('error-chart');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width = canvas.parentElement.clientWidth - 32;
-  const H = canvas.height = 120;
-  ctx.clearRect(0, 0, W, H);
+// ---- Tree silhouette definitions (PNW conifers) ----
+const TREE_SILHOUETTES = [
+  { // Douglas Fir — conical, slightly irregular, drooping lower branches
+    id: 'sil-0', vb: '0 0 40 100',
+    path: 'M20 0 L17 12 L12 14 L15 20 L9 24 L13 30 L7 35 L11 40 L5 46 L10 50 L4 56 L9 60 L3 67 L8 72 L2 78 L7 82 L3 88 L17 90 L17 100 L23 100 L23 90 L37 88 L33 82 L38 78 L32 72 L37 67 L31 60 L36 56 L30 50 L35 46 L29 40 L33 35 L27 30 L31 24 L25 20 L28 14 L23 12 Z'
+  },
+  { // Western Red Cedar — narrow pyramidal, buttressed trunk, drooping branches
+    id: 'sil-1', vb: '0 0 36 100',
+    path: 'M18 0 L16 10 L11 16 L14 22 L8 30 L12 35 L6 44 L10 48 L4 57 L9 62 L3 70 L8 74 L4 82 L14 88 L12 92 L12 100 L24 100 L24 92 L22 88 L32 82 L28 74 L33 70 L27 62 L32 57 L26 48 L30 44 L24 35 L28 30 L22 22 L25 16 L20 10 Z'
+  },
+  { // Sitka Spruce — broad conical, dense branching
+    id: 'sil-2', vb: '0 0 50 100',
+    path: 'M25 0 L22 8 L16 12 L19 18 L12 24 L16 28 L8 35 L13 38 L5 46 L11 50 L3 58 L9 62 L2 70 L8 74 L1 82 L10 86 L5 90 L18 93 L18 100 L32 100 L32 93 L45 90 L40 86 L49 82 L42 74 L48 70 L41 62 L47 58 L39 50 L45 46 L37 38 L42 35 L34 28 L38 24 L31 18 L34 12 L28 8 Z'
+  },
+  { // Western Hemlock — drooping leader tip, delicate feathery crown
+    id: 'sil-3', vb: '0 0 38 100',
+    path: 'M16 0 L18 3 L19 1 L19 6 L15 12 L18 16 L12 22 L16 26 L10 33 L14 37 L7 44 L12 48 L5 56 L10 60 L4 68 L9 72 L3 80 L8 84 L4 90 L16 93 L16 100 L22 100 L22 93 L34 90 L30 84 L35 80 L29 72 L34 68 L28 60 L33 56 L26 48 L31 44 L24 37 L28 33 L22 26 L26 22 L20 16 L23 12 L19 6 Z'
+  },
+  { // Noble Fir — symmetrical narrow spire
+    id: 'sil-4', vb: '0 0 34 100',
+    path: 'M17 0 L15 10 L11 15 L14 20 L10 27 L13 31 L9 38 L12 42 L8 50 L11 54 L7 62 L10 66 L6 74 L9 78 L5 86 L14 90 L14 100 L20 100 L20 90 L29 86 L25 78 L28 74 L24 66 L27 62 L23 54 L26 50 L22 42 L25 38 L21 31 L24 27 L20 20 L23 15 L19 10 Z'
+  },
+];
 
-  if (!trees.length) return;
+// ---- Forest profile rendering ----
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
-  // Bin into tiers
-  const tierNames = ['Common', 'Tall', 'Regional', 'National', 'Global'];
-  const tierColours = { Common:'#6688aa', Tall:'#44bb44', Regional:'#ffcc00', National:'#ff8800', Global:'#ff4444' };
-  const counts = {};
-  tierNames.forEach(t => counts[t] = 0);
-  trees.forEach(t => counts[t.tier] = (counts[t.tier] || 0) + 1);
+function renderForest(trees, centerLat, centerLon) {
+  const svg = document.getElementById('forest-viz');
+  svg.innerHTML = '';
 
-  const maxCount = Math.max(...Object.values(counts), 1);
-  const barW = (W - 20) / tierNames.length;
-  const pad = 4;
+  const vizTrees = trees.slice(0, 200);
+  if (!vizTrees.length) return;
 
-  tierNames.forEach((tier, i) => {
-    const x = 10 + i * barW + pad;
-    const h = (counts[tier] / maxCount) * (H - 30);
-    const y = H - 18 - h;
-
-    ctx.fillStyle = tierColours[tier];
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(x, y, barW - pad * 2, h);
-    ctx.globalAlpha = 1;
-
-    // Label
-    ctx.fillStyle = '#5a6070';
-    ctx.font = '10px JetBrains Mono';
-    ctx.textAlign = 'center';
-    ctx.fillText(tier.slice(0, 3), x + (barW - pad * 2) / 2, H - 4);
-
-    // Count on top
-    if (counts[tier]) {
-      ctx.fillStyle = '#d0d4dc';
-      ctx.fillText(counts[tier], x + (barW - pad * 2) / 2, y - 4);
-    }
+  // Inject silhouette symbols into defs
+  const defs = document.createElementNS(SVG_NS, 'defs');
+  TREE_SILHOUETTES.forEach(s => {
+    const sym = document.createElementNS(SVG_NS, 'symbol');
+    sym.setAttribute('id', s.id);
+    sym.setAttribute('viewBox', s.vb);
+    const p = document.createElementNS(SVG_NS, 'path');
+    p.setAttribute('d', s.path);
+    sym.appendChild(p);
+    defs.appendChild(sym);
   });
+  svg.appendChild(defs);
+
+  // Measure container
+  const rect = svg.getBoundingClientRect();
+  const W = rect.width || 300;
+  const H = rect.height || 160;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const SCALE_W = 36;
+  const BOTTOM_H = 16;
+  const TOP_PAD = 6;
+  const FOREST_L = SCALE_W;
+  const FOREST_R = W - SCALE_W;
+  const FOREST_W = FOREST_R - FOREST_L;
+  const GROUND_Y = H - BOTTOM_H;
+
+  // Height calculations
+  const heights = vizTrees.map(t => t.height_m);
+  const maxH = Math.max(...heights);
+  const minH = Math.min(...heights);
+  const pxPerMeter = (GROUND_Y - TOP_PAD) / maxH;
+
+  // Ground line
+  const ground = document.createElementNS(SVG_NS, 'line');
+  ground.setAttribute('x1', FOREST_L);
+  ground.setAttribute('y1', GROUND_Y);
+  ground.setAttribute('x2', FOREST_R);
+  ground.setAttribute('y2', GROUND_Y);
+  ground.setAttribute('stroke', '#1e2230');
+  ground.setAttribute('stroke-width', '1');
+  svg.appendChild(ground);
+
+  // Draw scales on both sides
+  drawForestScale(svg, maxH, pxPerMeter, GROUND_Y, 0, 'right', TOP_PAD);
+  drawForestScale(svg, maxH, pxPerMeter, GROUND_Y, W - SCALE_W, 'left', TOP_PAD);
+
+  // Compass labels along bottom
+  const dirs = ['S', 'W', 'N', 'E', 'S'];
+  dirs.forEach((d, i) => {
+    const x = FOREST_L + (i / (dirs.length - 1)) * FOREST_W;
+    const label = document.createElementNS(SVG_NS, 'text');
+    label.setAttribute('x', x);
+    label.setAttribute('y', H - 2);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('fill', d === 'N' ? '#ff4444' : '#3a3f50');
+    label.setAttribute('font-family', "'JetBrains Mono', monospace");
+    label.setAttribute('font-size', '10');
+    label.setAttribute('font-weight', d === 'N' ? '700' : '400');
+    label.textContent = d;
+    svg.appendChild(label);
+  });
+
+  // Sort ascending by height (painter's algorithm: tallest on top)
+  const sorted = [...vizTrees].sort((a, b) => a.height_m - b.height_m);
+
+  // Forest group
+  const forestG = document.createElementNS(SVG_NS, 'g');
+  forestG.classList.add('forest');
+
+  sorted.forEach(t => {
+    const silIdx = t.rank % TREE_SILHOUETTES.length;
+    const sil = TREE_SILHOUETTES[silIdx];
+    const vbParts = sil.vb.split(' ').map(Number);
+    const aspect = vbParts[2] / vbParts[3];
+
+    const treePxH = t.height_m * pxPerMeter;
+    const treePxW = treePxH * aspect;
+
+    // Compass bearing from center to tree
+    const bearing = bearingBetween(centerLat, centerLon, t.lat, t.lon);
+    // Map bearing so South=0 (left), North=0.5 (center), South=1.0 (right)
+    const xNorm = ((bearing + 180) % 360) / 360;
+    const x = FOREST_L + xNorm * (FOREST_W - treePxW);
+    const y = GROUND_Y - treePxH;
+
+    // Depth shading: shorter = lighter, taller = darker
+    const depthFactor = (t.height_m - minH) / (maxH - minH || 1);
+    const grey = Math.round(80 - depthFactor * 55); // 80 (light) to 25 (dark)
+    const fill = `rgb(${grey},${grey},${grey})`;
+
+    const use = document.createElementNS(SVG_NS, 'use');
+    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + sil.id);
+    use.setAttribute('x', x);
+    use.setAttribute('y', y);
+    use.setAttribute('width', treePxW);
+    use.setAttribute('height', treePxH);
+    use.setAttribute('fill', fill);
+    use.classList.add('tree-sil');
+    use.dataset.rank = t.rank;
+
+    const title = document.createElementNS(SVG_NS, 'title');
+    title.textContent = `#${t.rank} — ${t.height_m} m (${t.tier})`;
+    use.appendChild(title);
+
+    use.addEventListener('click', (e) => { e.stopPropagation(); highlightTree(t); });
+    forestG.appendChild(use);
+  });
+
+  svg.appendChild(forestG);
 }
 
-// ---- Ground Truth Mode ----
-let gtActive = false;
+function drawForestScale(svg, maxH, pxPerMeter, groundY, offsetX, align, topPad) {
+  const g = document.createElementNS(SVG_NS, 'g');
+
+  // Tick interval
+  let interval = 10;
+  if (maxH > 60) interval = 20;
+  if (maxH > 120) interval = 50;
+
+  const lineX = align === 'right' ? offsetX + 30 : offsetX + 6;
+
+  // Vertical line
+  const line = document.createElementNS(SVG_NS, 'line');
+  line.setAttribute('x1', lineX);
+  line.setAttribute('y1', groundY);
+  line.setAttribute('x2', lineX);
+  line.setAttribute('y2', topPad);
+  line.setAttribute('stroke', '#2a2e3a');
+  line.setAttribute('stroke-width', '1');
+  g.appendChild(line);
+
+  for (let h = 0; h <= maxH; h += interval) {
+    const y = groundY - h * pxPerMeter;
+    if (y < topPad - 2) break;
+
+    // Tick
+    const tick = document.createElementNS(SVG_NS, 'line');
+    const tickDir = align === 'right' ? -1 : 1;
+    tick.setAttribute('x1', lineX);
+    tick.setAttribute('y1', y);
+    tick.setAttribute('x2', lineX + tickDir * 4);
+    tick.setAttribute('y2', y);
+    tick.setAttribute('stroke', '#2a2e3a');
+    tick.setAttribute('stroke-width', '1');
+    g.appendChild(tick);
+
+    // Label
+    const text = document.createElementNS(SVG_NS, 'text');
+    text.setAttribute('x', align === 'right' ? lineX - 6 : lineX + 8);
+    text.setAttribute('y', y + 3);
+    text.setAttribute('text-anchor', align === 'right' ? 'end' : 'start');
+    text.setAttribute('fill', '#3a3f50');
+    text.setAttribute('font-family', "'JetBrains Mono', monospace");
+    text.setAttribute('font-size', '9');
+    text.textContent = h + 'm';
+    g.appendChild(text);
+  }
+
+  svg.appendChild(g);
+}
+
+function highlightTree(tree) {
+  // Fly map to tree
+  map.flyTo([tree.lat, tree.lon], 16);
+
+  // Flash the corresponding map marker
+  markers.forEach(m => {
+    const ll = m.getLatLng();
+    if (Math.abs(ll.lat - tree.lat) < 0.00001 && Math.abs(ll.lng - tree.lon) < 0.00001) {
+      m.setStyle({ color: '#ffffff', fillColor: '#ffffff', fillOpacity: 0.9, weight: 3 });
+      m.setRadius(14);
+      setTimeout(() => {
+        m.setStyle({ color: tree.colour, fillColor: tree.colour, fillOpacity: 0.5, weight: 1.5 });
+        m.setRadius(Math.max(4, Math.min(10, tree.height_m / 10)));
+      }, 2000);
+    }
+  });
+
+  // Highlight silhouette in SVG
+  document.querySelectorAll('#forest-viz .tree-sil').forEach(el => el.classList.remove('highlighted'));
+  const sil = document.querySelector(`#forest-viz .tree-sil[data-rank="${tree.rank}"]`);
+  if (sil) sil.classList.add('highlighted');
+
+  // Open ground truth modal
+  openGtModal(tree);
+}
+
+
+// ---- Ground Truth Modal ----
 let gtUserPos = null;      // {lat, lon}
 let gtSelectedTree = null; // tree object from analysis
-let gtTrees = [];          // current analysis trees
 let gtViewMarker = null;
 let gtLineLayer = null;
 
-function toggleGroundTruth() {
-  gtActive = !gtActive;
-  const el = document.getElementById('gt-toggle');
-  const panel = document.getElementById('gt-panel');
-  el.classList.toggle('active', gtActive);
-  panel.classList.toggle('active', gtActive);
+function openGtModal(tree) {
+  gtSelectedTree = tree;
+  const overlay = document.getElementById('gt-modal-overlay');
+
+  // Header
+  document.getElementById('gt-title').textContent = `#${tree.rank} — ${tree.height_m} m`;
+  const tierSpan = document.getElementById('gt-tier');
+  tierSpan.textContent = tree.tier;
+  tierSpan.style.color = tree.colour;
+
+  // Reset measurement form
+  document.getElementById('gt-result').innerHTML = '';
+
+  updateNavigation();
+  overlay.classList.add('active');
+}
+
+function closeGtModal() {
+  document.getElementById('gt-modal-overlay').classList.remove('active');
+  if (gtLineLayer) { map.removeLayer(gtLineLayer); gtLineLayer = null; }
 }
 
 function acquireGPS() {
@@ -606,55 +734,6 @@ function acquireGPS() {
   );
 }
 
-function updateCandidates(trees) {
-  gtTrees = trees;
-  const container = document.getElementById('gt-candidates');
-  container.innerHTML = '';
-
-  // Top 10 candidates: prioritize taller and rarer trees
-  const candidates = trees.slice(0, 10);
-  if (!candidates.length) {
-    container.innerHTML = '<div style="font-size:11px;color:#5a6070;">Run an analysis first</div>';
-    return;
-  }
-
-  candidates.forEach(t => {
-    const div = document.createElement('div');
-    div.className = 'gt-candidate';
-    div.dataset.rank = t.rank;
-    div.innerHTML = `
-      <div class="gt-tree-info">
-        <span class="gt-rank">#${t.rank}</span>
-        <span class="dot" style="background:${t.colour}"></span>
-        <span class="gt-height">${t.height_m} m</span>
-        <span class="gt-tier">${t.tier}</span>
-      </div>
-      <div class="gt-detail">${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</div>
-    `;
-    div.addEventListener('click', () => selectCandidate(t, div));
-    container.appendChild(div);
-  });
-}
-
-function selectCandidate(tree, el) {
-  gtSelectedTree = tree;
-
-  // Highlight selection
-  document.querySelectorAll('.gt-candidate').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-
-  // Show navigation, rangefinder, and measurement sections
-  document.getElementById('gt-nav-section').style.display = '';
-  document.getElementById('gt-rf-section').style.display = '';
-  document.getElementById('gt-measure-section').style.display = '';
-  document.getElementById('gt-calc-btn').disabled = false;
-  document.getElementById('gt-result').innerHTML = '';
-
-  updateNavigation();
-  updateRangefinderSettings(tree);
-  map.flyTo([tree.lat, tree.lon], 16);
-}
-
 function bearingBetween(lat1, lon1, lat2, lon2) {
   const toRad = d => d * Math.PI / 180;
   const toDeg = r => r * 180 / Math.PI;
@@ -681,21 +760,21 @@ function compassDir(deg) {
 
 function updateNavigation() {
   const t = gtSelectedTree;
-  const guidance = document.getElementById('gt-guidance');
+  const stats = document.getElementById('gt-nav-stats');
 
   if (!gtUserPos) {
-    guidance.innerHTML = `
-      <div class="gt-guidance-row">
-        <span class="gt-guidance-label">Enable GPS to see bearing & distance</span>
-      </div>
+    stats.innerHTML = `
+      <div class="gt-row"><span class="gt-label">Satellite Est.</span><span class="gt-value">${t.height_m} m &pm;${t.error_m}</span></div>
+      <div class="gt-row"><span class="gt-label">Coords</span><span class="gt-value" style="font-size:11px">${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</span></div>
+      <div style="font-size:10px; color:#5a6070; margin-top:4px;">Enable GPS for bearing &amp; distance</div>
     `;
-    // Still show compass pointing north
     document.getElementById('gt-compass-needle').style.transform = 'translate(-50%, -100%) rotate(0deg)';
     return;
   }
 
   const dist = haversineMeters(gtUserPos.lat, gtUserPos.lon, t.lat, t.lon);
   const bearing = bearingBetween(gtUserPos.lat, gtUserPos.lon, t.lat, t.lon);
+  const angleToTop = Math.atan2(t.height_m, dist) * 180 / Math.PI;
 
   // Draw line on map
   if (gtLineLayer) map.removeLayer(gtLineLayer);
@@ -706,78 +785,11 @@ function updateNavigation() {
   // Compass needle
   document.getElementById('gt-compass-needle').style.transform = `translate(-50%, -100%) rotate(${bearing}deg)`;
 
-  // Recommended viewing distance: 1-1.5x tree height, minimum 30m
-  const idealDist = Math.max(30, t.height_m * 1.2);
-  const tooClose = dist < 20;
-  const tooFar = dist > 2000; // rangefinder max range
-
-  let distAdvice = '';
-  if (tooClose) distAdvice = 'Too close — back up for accurate angle measurement';
-  else if (tooFar) distAdvice = 'Beyond rangefinder max range (2000 yd)';
-  else if (dist < idealDist * 0.7) distAdvice = 'Move back for a better angle';
-  else if (dist > idealDist * 3) distAdvice = 'Closer will improve accuracy';
-  else distAdvice = 'Good viewing distance';
-
-  guidance.innerHTML = `
-    <div class="gt-guidance-row">
-      <span class="gt-guidance-label">Bearing</span>
-      <span class="gt-guidance-value bearing">${bearing.toFixed(1)}° ${compassDir(bearing)}</span>
-    </div>
-    <div class="gt-guidance-row">
-      <span class="gt-guidance-label">Distance</span>
-      <span class="gt-guidance-value">${dist.toFixed(0)} m</span>
-    </div>
-    <div class="gt-guidance-row">
-      <span class="gt-guidance-label">Ideal Distance</span>
-      <span class="gt-guidance-value">${idealDist.toFixed(0)} m</span>
-    </div>
-    <div class="gt-guidance-row">
-      <span class="gt-guidance-label">Satellite Est.</span>
-      <span class="gt-guidance-value">${t.height_m} m ±${t.error_m}</span>
-    </div>
-    <div style="font-size:10px; color:${tooClose || tooFar ? '#ff8800' : '#6dce70'}; margin-top:6px;">${distAdvice}</div>
-  `;
-}
-
-function updateRangefinderSettings(tree) {
-  const dist = gtUserPos ? haversineMeters(gtUserPos.lat, gtUserPos.lon, tree.lat, tree.lon) : null;
-  const container = document.getElementById('gt-rf-settings');
-
-  // Estimated angle to crown from ideal distance
-  const viewDist = dist || Math.max(30, tree.height_m * 1.2);
-  const estAngle = Math.atan2(tree.height_m, viewDist) * 180 / Math.PI;
-
-  // Vortex Diamondback HD 2000 specific settings
-  const useYards = viewDist > 500;
-  const modeRec = estAngle > 30 ? 'LOS (Line of Sight)' : 'HCD (Angle Compensated)';
-
-  container.innerHTML = `
-    <div class="gt-rf-row">
-      <span class="gt-rf-key">Mode</span>
-      <span class="gt-rf-val">${modeRec}</span>
-    </div>
-    <div class="gt-rf-row">
-      <span class="gt-rf-key">Units</span>
-      <span class="gt-rf-val">Meters</span>
-    </div>
-    <div class="gt-rf-row">
-      <span class="gt-rf-key">Scan Mode</span>
-      <span class="gt-rf-val">ON — hold for continuous</span>
-    </div>
-    <div class="gt-rf-row">
-      <span class="gt-rf-key">Target Priority</span>
-      <span class="gt-rf-val">Last (for distant crowns)</span>
-    </div>
-    <div class="gt-rf-row">
-      <span class="gt-rf-key">Est. Angle to Crown</span>
-      <span class="gt-rf-val">${estAngle.toFixed(1)}°</span>
-    </div>
-    <div style="font-size:10px; color:#5a6070; margin-top:8px; line-height:1.5;">
-      <strong>Procedure:</strong><br/>
-      1. Aim at crown apex, press POWER once — record LOS distance & angle<br/>
-      2. Aim at trunk base, press POWER once — record LOS distance & angle<br/>
-      3. Enter both readings below
-    </div>
+  stats.innerHTML = `
+    <div class="gt-row"><span class="gt-label">Bearing</span><span class="gt-value bearing">${bearing.toFixed(1)}&deg; ${compassDir(bearing)}</span></div>
+    <div class="gt-row"><span class="gt-label">Distance</span><span class="gt-value">${dist.toFixed(0)} m</span></div>
+    <div class="gt-row"><span class="gt-label">Angle to Top</span><span class="gt-value">${angleToTop.toFixed(1)}&deg;</span></div>
+    <div class="gt-row"><span class="gt-label">Satellite Est.</span><span class="gt-value">${t.height_m} m &pm;${t.error_m}</span></div>
   `;
 }
 
@@ -854,12 +866,8 @@ function calculateHeight() {
   `;
 }
 
-// Enable calc button when inputs change
-['gt-dist-top', 'gt-angle-top', 'gt-dist-base', 'gt-angle-base'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    document.getElementById('gt-calc-btn').disabled = false;
-  });
-});
+// Close modal on Escape
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGtModal(); });
 </script>
 </body>
 </html>

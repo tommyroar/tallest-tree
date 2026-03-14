@@ -118,8 +118,8 @@ async function run() {
     if (!sidebarText.includes('Statistics')) fail('Sidebar missing Statistics section');
     const statMax = await page.$('#stat-max');
     if (!statMax) fail('#stat-max element not found');
-    const treeList = await page.$('#tree-list');
-    if (!treeList) fail('#tree-list element not found');
+    const forestViz = await page.$('#forest-viz');
+    if (!forestViz) fail('#forest-viz element not found');
     log('✓ Sidebar structure correct');
 
     // 7. Check hint
@@ -138,13 +138,13 @@ async function run() {
       m.fire('click', { latlng: latlng });
     });
 
-    // 9. Wait for tree list to populate (S3 fetch can be slow)
+    // 9. Wait for forest profile to populate (S3 fetch can be slow)
     log('Waiting for analysis results (this may take up to 60s)...');
-    await page.waitForSelector('#tree-list li', { timeout: ANALYSIS_TIMEOUT });
+    await page.waitForSelector('#forest-viz .tree-sil', { timeout: ANALYSIS_TIMEOUT });
 
-    const treeCount = await page.$$eval('#tree-list li', items => items.length);
-    if (treeCount === 0) fail('Tree list is empty after analysis');
-    log(`✓ Tree list populated (${treeCount} trees)`);
+    const treeCount = await page.$$eval('#forest-viz .tree-sil', items => items.length);
+    if (treeCount === 0) fail('Forest profile is empty after analysis');
+    log(`✓ Forest profile populated (${treeCount} trees)`);
 
     // 10. Check stats updated
     const maxText = await page.$eval('#stat-max', el => el.textContent);

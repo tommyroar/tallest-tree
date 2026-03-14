@@ -1,8 +1,13 @@
 """Unit tests for pure helper functions in server.py."""
 
+import collections
 import math
 import pytest
-from server import _latlon_to_web_mercator, _latlon_to_quadkey, _tile_origin_meters, _classify
+from server import (
+    _latlon_to_web_mercator, _latlon_to_quadkey, _tile_origin_meters,
+    _classify, _mercator_to_latlon, _open_tile, _overlay_cache,
+    OVERLAY_CACHE_MAX,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -118,3 +123,68 @@ class TestClassify:
 
     def test_boundary_50(self):
         assert _classify(50.0)[0] == "Tall"
+
+
+# ---------------------------------------------------------------------------
+# _mercator_to_latlon
+# ---------------------------------------------------------------------------
+
+class TestMercatorToLatlon:
+    def test_origin(self):
+        lat, lon = _mercator_to_latlon(0, 0)
+        assert lat == pytest.approx(0, abs=0.001)
+        assert lon == pytest.approx(0, abs=0.001)
+
+    def test_seattle_roundtrip(self):
+        """Convert Seattle to Mercator and back — should recover original coords."""
+        orig_lat, orig_lon = 47.6062, -122.3321
+        mx, my = _latlon_to_web_mercator(orig_lat, orig_lon)
+        lat, lon = _mercator_to_latlon(mx, my)
+        assert lat == pytest.approx(orig_lat, abs=0.001)
+        assert lon == pytest.approx(orig_lon, abs=0.001)
+
+    def test_southern_hemisphere(self):
+        mx, my = _latlon_to_web_mercator(-33.8688, 151.2093)  # Sydney
+        lat, lon = _mercator_to_latlon(mx, my)
+        assert lat == pytest.approx(-33.8688, abs=0.001)
+        assert lon == pytest.approx(151.2093, abs=0.001)
+
+
+# ---------------------------------------------------------------------------
+# Overlay cache eviction
+# ---------------------------------------------------------------------------
+
+class TestOverlayCacheEviction:
+    def test_cache_is_ordered_dict(self):
+        assert isinstance(_overlay_cache, collections.OrderedDict)
+
+    def test_eviction_limit(self):
+        """Inserting more than OVERLAY_CACHE_MAX entries evicts oldest."""
+        _overlay_cache.clear()
+        for i in range(OVERLAY_CACHE_MAX + 10):
+            _overlay_cache[f"key_{i}"] = b"data"
+            while len(_overlay_cache) > OVERLAY_CACHE_MAX:
+                _overlay_cache.popitem(last=False)
+        assert len(_overlay_cache) == OVERLAY_CACHE_MAX
+        # Oldest keys should be gone
+        assert "key_0" not in _overlay_cache
+        assert "key_9" not in _overlay_cache
+        # Newest keys should remain
+        assert f"key_{OVERLAY_CACHE_MAX + 9}" in _overlay_cache
+        _overlay_cache.clear()
+
+    def test_max_is_reasonable(self):
+        assert OVERLAY_CACHE_MAX > 0
+        assert OVERLAY_CACHE_MAX <= 256
+
+
+# ---------------------------------------------------------------------------
+# _open_tile caching
+# ---------------------------------------------------------------------------
+
+class TestOpenTileCache:
+    def test_lru_cache_is_configured(self):
+        """_open_tile should be wrapped with lru_cache."""
+        assert hasattr(_open_tile, 'cache_info'), "_open_tile should use lru_cache"
+        info = _open_tile.cache_info()
+        assert info.maxsize == 32

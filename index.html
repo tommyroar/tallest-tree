@@ -88,7 +88,7 @@
   .stat .lbl { font-size:10px; color:#5a6070; text-transform:uppercase; }
 
   /* Error bar chart */
-  #error-chart { width:100%; height:120px; }
+
 
   /* Forest silhouette visualization */
   #forest-section { height: 22vh; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; }
@@ -318,10 +318,6 @@
       </div>
     </div>
 
-    <div class="section" id="chart-section">
-      <div class="section-label">Height Distribution (±2.8 m MAE)</div>
-      <canvas id="error-chart"></canvas>
-    </div>
   </div>
 </div>
 
@@ -483,7 +479,7 @@ map.on('click', async (e) => {
     renderForest(data.trees, lat, lng);
 
     // Error bar chart
-    drawChart(data.trees);
+
 
     // Ground truth candidates
     updateCandidates(data.trees);
@@ -714,50 +710,6 @@ function highlightTree(tree) {
   if (sil) sil.classList.add('highlighted');
 }
 
-// ---- Simple canvas bar chart with error bars ----
-function drawChart(trees) {
-  const canvas = document.getElementById('error-chart');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width = canvas.parentElement.clientWidth - 32;
-  const H = canvas.height = 120;
-  ctx.clearRect(0, 0, W, H);
-
-  if (!trees.length) return;
-
-  // Bin into tiers
-  const tierNames = ['Common', 'Tall', 'Regional', 'National', 'Global'];
-  const tierColours = { Common:'#6688aa', Tall:'#44bb44', Regional:'#ffcc00', National:'#ff8800', Global:'#ff4444' };
-  const counts = {};
-  tierNames.forEach(t => counts[t] = 0);
-  trees.forEach(t => counts[t.tier] = (counts[t.tier] || 0) + 1);
-
-  const maxCount = Math.max(...Object.values(counts), 1);
-  const barW = (W - 20) / tierNames.length;
-  const pad = 4;
-
-  tierNames.forEach((tier, i) => {
-    const x = 10 + i * barW + pad;
-    const h = (counts[tier] / maxCount) * (H - 30);
-    const y = H - 18 - h;
-
-    ctx.fillStyle = tierColours[tier];
-    ctx.globalAlpha = 0.7;
-    ctx.fillRect(x, y, barW - pad * 2, h);
-    ctx.globalAlpha = 1;
-
-    // Label
-    ctx.fillStyle = '#5a6070';
-    ctx.font = '10px JetBrains Mono';
-    ctx.textAlign = 'center';
-    ctx.fillText(tier.slice(0, 3), x + (barW - pad * 2) / 2, H - 4);
-
-    // Count on top
-    if (counts[tier]) {
-      ctx.fillStyle = '#d0d4dc';
-      ctx.fillText(counts[tier], x + (barW - pad * 2) / 2, y - 4);
-    }
-  });
-}
 
 // ---- Ground Truth Mode ----
 let gtActive = false;

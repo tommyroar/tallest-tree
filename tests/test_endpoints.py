@@ -1,6 +1,7 @@
 """Integration tests for Flask endpoints."""
 
 import json
+from unittest.mock import patch, MagicMock
 import pytest
 
 
@@ -38,6 +39,30 @@ class TestFastEndpoints:
         resp = client.get("/api/overlay?key=nonexistent")
         assert resp.status_code == 404
 
+    def test_health_mocked(self, client):
+        """Health endpoint returns ok with HEAD request (no S3 needed)."""
+        mock_resp = MagicMock()
+        mock_resp.headers = {"Content-Length": "12345", "Content-Type": "image/tiff"}
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+
+        with patch("server.urllib.request.urlopen", return_value=mock_resp):
+            resp = client.get("/api/health")
+            assert resp.status_code == 200
+            data = json.loads(resp.data)
+            assert data["status"] == "ok"
+            assert data["content_length"] == "12345"
+            assert data["content_type"] == "image/tiff"
+
+    def test_health_failure_mocked(self, client):
+        """Health endpoint returns 503 when S3 is unreachable."""
+        with patch("server.urllib.request.urlopen", side_effect=Exception("Connection refused")):
+            resp = client.get("/api/health")
+            assert resp.status_code == 503
+            data = json.loads(resp.data)
+            assert data["status"] == "error"
+            assert "Connection refused" in data["detail"]
+
 
 # ---------------------------------------------------------------------------
 # Slow tests (real S3)
@@ -50,9 +75,8 @@ class TestSlowEndpoints:
         assert resp.status_code == 200
         data = json.loads(resp.data)
         assert data["status"] == "ok"
-        assert "crs" in data
-        assert "shape" in data
-        assert "res" in data
+        assert "content_length" in data
+        assert "content_type" in data
 
     def test_analyze_real_location(self, client):
         resp = client.get("/api/analyze?lat=47.8&lon=-123.9&window=1000")

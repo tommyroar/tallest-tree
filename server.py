@@ -4,10 +4,12 @@ Reads Meta/WRI 1 m canopy‑height GeoTIFFs from S3 via /vsicurl/,
 detects tree tops with scipy local‑maxima, and returns ranked JSON + grayscale PNG overlay.
 """
 
+import collections
 import hashlib
 import io
 import math
 import os
+import urllib.request
 import uuid
 from functools import lru_cache
 
@@ -19,6 +21,7 @@ from flask import Flask, Response, jsonify, request, send_file
 from flask_cors import CORS
 from PIL import Image
 from scipy.ndimage import gaussian_filter, maximum_filter
+from scipy.spatial import cKDTree
 
 # ---------------------------------------------------------------------------
 # GDAL / rasterio environment — must be set before any dataset is opened
@@ -57,8 +60,9 @@ TIERS = [
 
 MAE = 2.8  # ±metres mean absolute error
 
-# In‑memory overlay cache  {key: PNG bytes}
-_overlay_cache: dict[str, bytes] = {}
+# In‑memory overlay cache with bounded size (LRU eviction)
+OVERLAY_CACHE_MAX = 64
+_overlay_cache: collections.OrderedDict[str, bytes] = collections.OrderedDict()
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)
@@ -127,6 +131,23 @@ def _classify(height: float) -> tuple[str, str]:
     return "Common", "#6688aa"
 
 
+def _mercator_to_latlon(mx: float, my: float) -> tuple[float, float]:
+    """EPSG:3857 metres → WGS‑84 (lat, lon)."""
+    lon = mx / 20037508.342789244 * 180.0
+    lat = math.atan(math.exp(my / 20037508.342789244 * math.pi)) * 360.0 / math.pi - 90.0
+    return round(lat, 6), round(lon, 6)
+
+
+@lru_cache(maxsize=32)
+def _open_tile(url: str) -> rasterio.DatasetReader:
+    """Open and cache a rasterio dataset handle for a tile URL.
+
+    GDAL's /vsicurl/ keeps the HTTP connection alive internally, so
+    reusing the handle avoids repeated TLS handshakes and header reads.
+    """
+    return rasterio.open(url)
+
+
 # ---------------------------------------------------------------------------
 # Core analysis
 # ---------------------------------------------------------------------------
@@ -139,32 +160,32 @@ def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
     quadkey = _latlon_to_quadkey(lat, lon)
     url = S3_URL_TEMPLATE.format(quadkey=quadkey)
 
-    with rasterio.open(url) as src:
-        res = src.res  # (pixel_width, pixel_height) in metres
-        px_w, px_h = abs(res[0]), abs(res[1])
+    src = _open_tile(url)
+    res = src.res  # (pixel_width, pixel_height) in metres
+    px_w, px_h = abs(res[0]), abs(res[1])
 
-        # Tile origin in EPSG:3857
-        t = src.transform
-        tile_x0 = t.c
-        tile_y0 = t.f  # top‑left y
+    # Tile origin in EPSG:3857
+    t = src.transform
+    tile_x0 = t.c
+    tile_y0 = t.f  # top‑left y
 
-        # Pixel offsets for the requested window
-        col_off = int((cx - half - tile_x0) / px_w)
-        row_off = int((tile_y0 - (cy + half)) / px_h)
-        n_cols = int(window_m / px_w)
-        n_rows = int(window_m / px_h)
+    # Pixel offsets for the requested window
+    col_off = int((cx - half - tile_x0) / px_w)
+    row_off = int((tile_y0 - (cy + half)) / px_h)
+    n_cols = int(window_m / px_w)
+    n_rows = int(window_m / px_h)
 
-        # Clamp to tile bounds
-        col_off = max(0, min(TILE_PX - 1, col_off))
-        row_off = max(0, min(TILE_PX - 1, row_off))
-        n_cols = min(n_cols, TILE_PX - col_off)
-        n_rows = min(n_rows, TILE_PX - row_off)
+    # Clamp to tile bounds
+    col_off = max(0, min(TILE_PX - 1, col_off))
+    row_off = max(0, min(TILE_PX - 1, row_off))
+    n_cols = min(n_cols, TILE_PX - col_off)
+    n_rows = min(n_rows, TILE_PX - row_off)
 
-        win = rasterio.windows.Window(col_off, row_off, n_cols, n_rows)
-        chm = src.read(1, window=win).astype(np.float32)
+    win = rasterio.windows.Window(col_off, row_off, n_cols, n_rows)
+    chm = src.read(1, window=win).astype(np.float32)
 
-        # Transform for the window (pixel → EPSG:3857 metres)
-        win_transform = rasterio.windows.transform(win, src.transform)
+    # Transform for the window (pixel → EPSG:3857 metres)
+    win_transform = rasterio.windows.transform(win, src.transform)
 
     # Replace nodata / negatives
     chm[chm < 0] = 0.0
@@ -178,42 +199,39 @@ def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
     local_max = maximum_filter(smoothed, size=9)
     peaks = (smoothed == local_max) & (smoothed > 2.0)  # min 2 m
 
-    # Non‑max suppression: keep only the tallest within 5 m radius
+    # Non‑max suppression via KDTree: keep only the tallest within 5 m radius
     peak_rows, peak_cols = np.nonzero(peaks)
     heights = smoothed[peak_rows, peak_cols]
-    order = np.argsort(-heights)
-    kept_mask = np.ones(len(order), dtype=bool)
-    suppression_px = int(5.0 / px_w)  # ~5 metres
-    for idx in range(len(order)):
-        if not kept_mask[order[idx]]:
-            continue
-        r0, c0 = peak_rows[order[idx]], peak_cols[order[idx]]
-        for jdx in range(idx + 1, len(order)):
-            if not kept_mask[order[jdx]]:
-                continue
-            ri, ci = peak_rows[order[jdx]], peak_cols[order[jdx]]
-            if abs(r0 - ri) <= suppression_px and abs(c0 - ci) <= suppression_px:
-                kept_mask[order[jdx]] = False
+    suppression_px = max(1, int(5.0 / px_w))  # ~5 metres
 
-    sel = kept_mask
-    peak_rows, peak_cols, heights = peak_rows[sel], peak_cols[sel], heights[sel]
+    if len(peak_rows) > 0:
+        coords = np.column_stack((peak_rows, peak_cols)).astype(np.float64)
+        tree_kd = cKDTree(coords)
+        order = np.argsort(-heights)
+        kept_mask = np.ones(len(order), dtype=bool)
+        for rank_idx in order:
+            if not kept_mask[rank_idx]:
+                continue
+            neighbours = tree_kd.query_ball_point(coords[rank_idx], r=suppression_px)
+            for nb in neighbours:
+                if nb != rank_idx and kept_mask[nb]:
+                    kept_mask[nb] = False
+        peak_rows = peak_rows[kept_mask]
+        peak_cols = peak_cols[kept_mask]
+        heights = heights[kept_mask]
 
     # Convert pixel coords → lat/lon
     trees = []
     for r, c, h in sorted(zip(peak_rows, peak_cols, heights), key=lambda t: -t[2]):
         mx, my = rasterio.transform.xy(win_transform, int(r), int(c))
-        # EPSG:3857 → WGS‑84
-        tree_lon = mx / 20037508.342789244 * 180.0
-        tree_lat = (
-            math.atan(math.exp(my / 20037508.342789244 * math.pi)) * 360.0 / math.pi - 90.0
-        )
+        tree_lat, tree_lon = _mercator_to_latlon(mx, my)
         tier, colour = _classify(float(h))
         trees.append({
             "rank": len(trees) + 1,
             "height_m": round(float(h), 1),
             "error_m": MAE,
-            "lat": round(tree_lat, 6),
-            "lon": round(tree_lon, 6),
+            "lat": tree_lat,
+            "lon": tree_lon,
             "tier": tier,
             "colour": colour,
         })
@@ -231,18 +249,17 @@ def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
     img.save(buf, format="PNG")
     overlay_bytes = buf.getvalue()
     overlay_key = hashlib.md5(overlay_bytes[:256]).hexdigest()[:12] + uuid.uuid4().hex[:4]
+
+    # Bounded overlay cache — evict oldest when full
     _overlay_cache[overlay_key] = overlay_bytes
+    while len(_overlay_cache) > OVERLAY_CACHE_MAX:
+        _overlay_cache.popitem(last=False)
 
     # Overlay geographic bounds (for Leaflet ImageOverlay)
-    # top‑left pixel → EPSG:3857 → WGS‑84
     ox0, oy0 = rasterio.transform.xy(win_transform, 0, 0)
     ox1, oy1 = rasterio.transform.xy(win_transform, n_rows - 1, n_cols - 1)
-    def _m_to_ll(mx, my):
-        lon_ = mx / 20037508.342789244 * 180.0
-        lat_ = math.atan(math.exp(my / 20037508.342789244 * math.pi)) * 360.0 / math.pi - 90.0
-        return round(lat_, 6), round(lon_, 6)
-    sw = _m_to_ll(ox0, oy1)
-    ne = _m_to_ll(ox1, oy0)
+    sw = _mercator_to_latlon(ox0, oy1)
+    ne = _mercator_to_latlon(ox1, oy0)
 
     valid = chm[chm > 0]
     stats = {
@@ -299,15 +316,17 @@ def overlay():
 def health():
     url = S3_URL_TEMPLATE.format(quadkey=HEALTH_CHECK_TILE)
     try:
-        with rasterio.open(url) as src:
-            info = {
-                "status": "ok",
-                "tile": HEALTH_CHECK_TILE,
-                "crs": str(src.crs),
-                "shape": list(src.shape),
-                "res": list(src.res),
-            }
-        return jsonify(info)
+        # Lightweight HEAD request instead of opening the full rasterio dataset
+        req = urllib.request.Request(url, method="HEAD")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content_length = resp.headers.get("Content-Length", "unknown")
+            content_type = resp.headers.get("Content-Type", "unknown")
+        return jsonify({
+            "status": "ok",
+            "tile": HEALTH_CHECK_TILE,
+            "content_length": content_length,
+            "content_type": content_type,
+        })
     except Exception as exc:
         return jsonify({"status": "error", "detail": str(exc)}), 503
 

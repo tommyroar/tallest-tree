@@ -91,8 +91,8 @@
   #error-chart { width:100%; height:120px; }
 
   /* Forest silhouette visualization */
-  #forest-section { flex: 0 0 50%; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; }
-  #forest-viz { width: 100%; flex: 1 1 auto; display: block; background: #0c0e13; }
+  #forest-section { height: 22vh; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; }
+  #forest-viz { width: 100%; flex: 1 1 auto; min-height: 100px; display: block; background: #0c0e13; }
   #forest-viz .tree-sil {
     cursor: pointer;
     transition: opacity .15s, filter .15s;
@@ -303,6 +303,11 @@
       </div>
     </div>
 
+    <div class="section" id="forest-section">
+      <div class="section-label">Forest Profile</div>
+      <svg id="forest-viz" preserveAspectRatio="xMidYMax meet"></svg>
+    </div>
+
     <div class="section" id="stats-section">
       <div class="section-label">Statistics</div>
       <div class="stats-grid">
@@ -316,11 +321,6 @@
     <div class="section" id="chart-section">
       <div class="section-label">Height Distribution (±2.8 m MAE)</div>
       <canvas id="error-chart"></canvas>
-    </div>
-
-    <div class="section" id="forest-section">
-      <div class="section-label">Forest Profile</div>
-      <svg id="forest-viz" preserveAspectRatio="xMidYMax meet"></svg>
     </div>
   </div>
 </div>

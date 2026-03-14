@@ -1,5 +1,5 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
 import { getTailscaleStatus, removeTailscaleServe } from '../lib/tailscale.js';
 
 describe('getTailscaleStatus', () => {
@@ -9,7 +9,10 @@ describe('getTailscaleStatus', () => {
     if (status.available) {
       assert.equal(typeof status.hostname, 'string');
       assert.ok(status.hostname.length > 0);
-      assert.ok(!status.hostname.endsWith('.'), 'Hostname should not end with a dot');
+      assert.ok(
+        !status.hostname.endsWith('.'),
+        'Hostname should not end with a dot',
+      );
     } else {
       assert.equal(status.hostname, null);
     }

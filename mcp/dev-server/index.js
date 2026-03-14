@@ -6,10 +6,18 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { getProcessOnPort, killProcessOnPort, isPortFree } from './lib/process.js';
-import { getTailscaleStatus, getTailscaleUrl, removeTailscaleServe } from './lib/tailscale.js';
-import { startVite, startJupyter } from './lib/servers.js';
-import { getServers, getServerByPort, removeServer } from './lib/state.js';
+import {
+  getProcessOnPort,
+  isPortFree,
+  killProcessOnPort,
+} from './lib/process.js';
+import { startJupyter, startVite } from './lib/servers.js';
+import { getServerByPort, getServers, removeServer } from './lib/state.js';
+import {
+  getTailscaleStatus,
+  getTailscaleUrl,
+  removeTailscaleServe,
+} from './lib/tailscale.js';
 
 const TOOLS = [
   {
@@ -181,7 +189,11 @@ async function handleDevServerUrls(args) {
 
   const free = await isPortFree(port);
   if (free) {
-    return json({ port, listening: false, message: `Nothing is listening on port ${port}` });
+    return json({
+      port,
+      listening: false,
+      message: `Nothing is listening on port ${port}`,
+    });
   }
 
   const localUrl = `http://localhost:${port}`;
@@ -208,15 +220,24 @@ async function handlePortCheck(args) {
 
   const proc = await getProcessOnPort(port);
   if (proc) {
-    return json({ port, status: 'in_use', pid: proc.pid, command: proc.command });
+    return json({
+      port,
+      status: 'in_use',
+      pid: proc.pid,
+      command: proc.command,
+    });
   }
 
-  return json({ port, status: 'in_use', message: 'Port is in use but could not identify the process' });
+  return json({
+    port,
+    status: 'in_use',
+    message: 'Port is in use but could not identify the process',
+  });
 }
 
 const server = new Server(
   { name: 'dev-server-manager', version: '1.0.0' },
-  { capabilities: { tools: {} } }
+  { capabilities: { tools: {} } },
 );
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({

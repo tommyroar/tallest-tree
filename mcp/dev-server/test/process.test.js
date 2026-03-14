@@ -1,7 +1,7 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import net from 'net';
-import { isPortFree, waitForPort, getProcessOnPort } from '../lib/process.js';
+import net from 'node:net';
+import { describe, it } from 'node:test';
+import { getProcessOnPort, isPortFree, waitForPort } from '../lib/process.js';
 
 describe('isPortFree', () => {
   it('returns true for a port nothing is listening on', async () => {

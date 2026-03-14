@@ -1,8 +1,8 @@
-import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, it } from 'node:test';
 
 let tmpDir;
 let stateFile;
@@ -34,7 +34,12 @@ describe('state', () => {
 
   it('addServer persists and getServerByPort retrieves', async () => {
     const { addServer, getServerByPort } = await loadModule();
-    addServer({ port: 5100, type: 'vite', pid: process.pid, project_dir: '/tmp/test' });
+    addServer({
+      port: 5100,
+      type: 'vite',
+      pid: process.pid,
+      project_dir: '/tmp/test',
+    });
 
     const entry = getServerByPort(5100);
     assert.equal(entry.type, 'vite');
@@ -46,7 +51,12 @@ describe('state', () => {
 
   it('removeServer deletes entry', async () => {
     const { addServer, removeServer, getServerByPort } = await loadModule();
-    addServer({ port: 5200, type: 'jupyter', pid: process.pid, project_dir: '/tmp/test2' });
+    addServer({
+      port: 5200,
+      type: 'jupyter',
+      pid: process.pid,
+      project_dir: '/tmp/test2',
+    });
     assert.ok(getServerByPort(5200));
 
     removeServer(5200);
@@ -56,9 +66,19 @@ describe('state', () => {
   it('getServers prunes dead PIDs and preserves alive ones', async () => {
     const { addServer, getServers } = await loadModule();
     // Add a server with current PID (alive)
-    addServer({ port: 5300, type: 'vite', pid: process.pid, project_dir: '/tmp/alive' });
+    addServer({
+      port: 5300,
+      type: 'vite',
+      pid: process.pid,
+      project_dir: '/tmp/alive',
+    });
     // Add a server with a dead PID
-    addServer({ port: 5301, type: 'jupyter', pid: 999999, project_dir: '/tmp/dead' });
+    addServer({
+      port: 5301,
+      type: 'jupyter',
+      pid: 999999,
+      project_dir: '/tmp/dead',
+    });
 
     const servers = getServers();
     // Both should be returned (alive shows running, dead shows not running)
@@ -78,8 +98,18 @@ describe('state', () => {
 
   it('addServer overwrites existing entry on same port', async () => {
     const { addServer, getServerByPort } = await loadModule();
-    addServer({ port: 5400, type: 'vite', pid: process.pid, project_dir: '/tmp/v1' });
-    addServer({ port: 5400, type: 'jupyter', pid: process.pid, project_dir: '/tmp/v2' });
+    addServer({
+      port: 5400,
+      type: 'vite',
+      pid: process.pid,
+      project_dir: '/tmp/v1',
+    });
+    addServer({
+      port: 5400,
+      type: 'jupyter',
+      pid: process.pid,
+      project_dir: '/tmp/v2',
+    });
 
     const entry = getServerByPort(5400);
     assert.equal(entry.type, 'jupyter');
@@ -88,7 +118,12 @@ describe('state', () => {
 
   it('state file is valid JSON after writes', async () => {
     const { addServer } = await loadModule();
-    addServer({ port: 5500, type: 'vite', pid: process.pid, project_dir: '/tmp/json' });
+    addServer({
+      port: 5500,
+      type: 'vite',
+      pid: process.pid,
+      project_dir: '/tmp/json',
+    });
 
     const raw = fs.readFileSync(stateFile, 'utf8');
     const parsed = JSON.parse(raw); // Should not throw

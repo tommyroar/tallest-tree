@@ -1,25 +1,30 @@
-import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFile } from 'child_process';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { execFile } from 'node:child_process';
+import path from 'node:path';
+import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const INDEX_JS = path.join(__dirname, '..', 'index.js');
 
 function mcpCall(request) {
   return new Promise((resolve, reject) => {
-    const child = execFile('node', [INDEX_JS], { timeout: 10000 }, (err, stdout, stderr) => {
-      if (err && !stdout) return reject(err);
-      // Parse the JSON-RPC response from stdout
-      try {
-        const response = JSON.parse(stdout.trim());
-        resolve(response);
-      } catch (e) {
-        reject(new Error(`Failed to parse response: ${stdout}`));
-      }
-    });
-    child.stdin.write(JSON.stringify(request) + '\n');
+    const child = execFile(
+      'node',
+      [INDEX_JS],
+      { timeout: 10000 },
+      (err, stdout, _stderr) => {
+        if (err && !stdout) return reject(err);
+        // Parse the JSON-RPC response from stdout
+        try {
+          const response = JSON.parse(stdout.trim());
+          resolve(response);
+        } catch (_e) {
+          reject(new Error(`Failed to parse response: ${stdout}`));
+        }
+      },
+    );
+    child.stdin.write(`${JSON.stringify(request)}\n`);
     child.stdin.end();
   });
 }
@@ -37,7 +42,7 @@ describe('MCP server', () => {
     assert.ok(response.result.tools);
     assert.equal(response.result.tools.length, 5);
 
-    const names = response.result.tools.map(t => t.name).sort();
+    const names = response.result.tools.map((t) => t.name).sort();
     assert.deepEqual(names, [
       'dev_server_start',
       'dev_server_status',
@@ -58,7 +63,11 @@ describe('MCP server', () => {
     for (const tool of response.result.tools) {
       assert.ok(tool.description, `${tool.name} missing description`);
       assert.ok(tool.inputSchema, `${tool.name} missing inputSchema`);
-      assert.equal(tool.inputSchema.type, 'object', `${tool.name} schema type should be object`);
+      assert.equal(
+        tool.inputSchema.type,
+        'object',
+        `${tool.name} schema type should be object`,
+      );
     }
   });
 
@@ -116,7 +125,10 @@ describe('MCP server', () => {
       jsonrpc: '2.0',
       id: 7,
       method: 'tools/call',
-      params: { name: 'dev_server_start', arguments: { type: 'invalid', project_dir: '/tmp' } },
+      params: {
+        name: 'dev_server_start',
+        arguments: { type: 'invalid', project_dir: '/tmp' },
+      },
     });
 
     assert.ok(response.result.isError);

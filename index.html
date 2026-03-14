@@ -346,6 +346,7 @@ window._map = L.map('map', {
   zoom: 8,
   maxBounds: [[41, -126], [50, -115]],
   zoomControl: true,
+  tap: false,           // prevent phantom click-through on touch devices (Leaflet #7765)
 });
 const map = window._map;
 
@@ -420,7 +421,11 @@ let clickMarker = null;
 const API = window.location.pathname.replace(/\/+$/, '');
 
 // ---- Click handler ----
+let _flyingTo = false;
+map.on('movestart', () => { _flyingTo = true; });
+map.on('moveend',   () => { setTimeout(() => { _flyingTo = false; }, 200); });
 map.on('click', async (e) => {
+  if (_flyingTo) return;                          // ignore clicks during flyTo
   const { lat, lng } = e.latlng;
   if (lat < 41 || lat > 50 || lng < -126 || lng > -115) return;
 

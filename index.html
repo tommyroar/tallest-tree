@@ -57,6 +57,15 @@
     pointer-events: none;
   }
   #sidebar.collapsed #collapse-btn { transform: rotate(180deg); }
+  #unit-toggle {
+    display: flex; align-items: center; background: #1e2230; border: 1px solid #2d3347;
+    border-radius: 4px; overflow: hidden; margin-right: 4px; pointer-events: all;
+  }
+  #unit-toggle button {
+    background: none; border: none; color: #5a6070; cursor: pointer;
+    font-size: 11px; font-weight: 600; padding: 3px 7px; transition: background .15s, color .15s;
+  }
+  #unit-toggle button.active { background: #2d3347; color: #e4e8f0; }
   #sidebar-body {
     max-height: 45vh;
     overflow-y: auto;
@@ -220,6 +229,10 @@
 <div id="sidebar">
   <div id="sidebar-header" onclick="togglePanel()">
     <h2>PNW Canopy Height Explorer</h2>
+    <div id="unit-toggle" onclick="event.stopPropagation()">
+      <button id="btn-m" class="active" onclick="setUnits('m')">m</button>
+      <button id="btn-ft" onclick="setUnits('ft')">ft</button>
+    </div>
     <button id="collapse-btn" aria-label="Collapse panel">&#9650;</button>
   </div>
   <div id="sidebar-body">
@@ -288,6 +301,37 @@
 </div>
 
 <script>
+// ---- Units ----
+let useFeet = false;
+function fmtH(meters) {
+  if (useFeet) return (meters * 3.28084).toFixed(1) + ' ft';
+  return meters + ' m';
+}
+function fmtH1(meters) {
+  if (useFeet) return (meters * 3.28084).toFixed(1) + ' ft';
+  return meters.toFixed(1) + ' m';
+}
+function setUnits(unit) {
+  useFeet = (unit === 'ft');
+  document.getElementById('btn-m').classList.toggle('active', !useFeet);
+  document.getElementById('btn-ft').classList.toggle('active', useFeet);
+  refreshUnits();
+}
+function refreshUnits() {
+  if (!window._lastData) return;
+  const data = window._lastData;
+  document.getElementById('stat-max').textContent = fmtH(data.stats.max_height);
+  document.getElementById('stat-mean').textContent = fmtH(data.stats.mean_height);
+  data.trees.forEach(t => {
+    if (t._marker) t._marker.setTooltipContent(`#${t.rank} — ${fmtH(t.height_m)} (${t.tier})`);
+  });
+  renderForest(data.trees, window._lastLat, window._lastLng);
+  if (gtSelectedTree) {
+    document.getElementById('gt-title').textContent = `#${gtSelectedTree.rank} — ${fmtH(gtSelectedTree.height_m)}`;
+    updateNavigation();
+  }
+}
+
 // ---- Panel collapse ----
 function togglePanel() {
   const sidebar = document.getElementById('sidebar');
@@ -405,9 +449,13 @@ map.on('click', async (e) => {
 
     if (data.error) { alert(data.error); return; }
 
+    window._lastData = data;
+    window._lastLat = lat;
+    window._lastLng = lng;
+
     // Stats
-    document.getElementById('stat-max').textContent = data.stats.max_height + ' m';
-    document.getElementById('stat-mean').textContent = data.stats.mean_height + ' m';
+    document.getElementById('stat-max').textContent = fmtH(data.stats.max_height);
+    document.getElementById('stat-mean').textContent = fmtH(data.stats.mean_height);
     document.getElementById('stat-trees').textContent = data.stats.n_trees;
     document.getElementById('stat-area').textContent = (data.stats.area_m2 / 1e6).toFixed(2);
 
@@ -430,8 +478,9 @@ map.on('click', async (e) => {
         fillColor: t.colour,
         fillOpacity: 0.5,
       }).addTo(map);
-      m.bindTooltip(`#${t.rank} — ${t.height_m} m (${t.tier})`, { className: 'tree-tip' });
+      m.bindTooltip(`#${t.rank} — ${fmtH(t.height_m)} (${t.tier})`, { className: 'tree-tip' });
       m.on('click', () => highlightTree(t));
+      t._marker = m;
       markers.push(m);
     });
 
@@ -581,7 +630,7 @@ function renderForest(trees, centerLat, centerLon) {
     use.dataset.rank = t.rank;
 
     const title = document.createElementNS(SVG_NS, 'title');
-    title.textContent = `#${t.rank} — ${t.height_m} m (${t.tier})`;
+    title.textContent = `#${t.rank} — ${fmtH(t.height_m)} (${t.tier})`;
     use.appendChild(title);
 
     use.addEventListener('click', (e) => { e.stopPropagation(); highlightTree(t); });
@@ -634,7 +683,7 @@ function drawForestScale(svg, maxH, pxPerMeter, groundY, offsetX, align, topPad)
     text.setAttribute('fill', '#3a3f50');
     text.setAttribute('font-family', "'JetBrains Mono', monospace");
     text.setAttribute('font-size', '9');
-    text.textContent = h + 'm';
+    text.textContent = useFeet ? Math.round(h * 3.28084) + 'ft' : h + 'm';
     g.appendChild(text);
   }
 
@@ -679,7 +728,7 @@ function openGtModal(tree) {
   const overlay = document.getElementById('gt-modal-overlay');
 
   // Header
-  document.getElementById('gt-title').textContent = `#${tree.rank} — ${tree.height_m} m`;
+  document.getElementById('gt-title').textContent = `#${tree.rank} — ${fmtH(tree.height_m)}`;
   const tierSpan = document.getElementById('gt-tier');
   tierSpan.textContent = tree.tier;
   tierSpan.style.color = tree.colour;
@@ -764,7 +813,7 @@ function updateNavigation() {
 
   if (!gtUserPos) {
     stats.innerHTML = `
-      <div class="gt-row"><span class="gt-label">Satellite Est.</span><span class="gt-value">${t.height_m} m &pm;${t.error_m}</span></div>
+      <div class="gt-row"><span class="gt-label">Satellite Est.</span><span class="gt-value">${fmtH(t.height_m)} &pm;${fmtH1(t.error_m)}</span></div>
       <div class="gt-row"><span class="gt-label">Coords</span><span class="gt-value" style="font-size:11px">${t.lat.toFixed(5)}, ${t.lon.toFixed(5)}</span></div>
       <div style="font-size:10px; color:#5a6070; margin-top:4px;">Enable GPS for bearing &amp; distance</div>
     `;
@@ -787,9 +836,9 @@ function updateNavigation() {
 
   stats.innerHTML = `
     <div class="gt-row"><span class="gt-label">Bearing</span><span class="gt-value bearing">${bearing.toFixed(1)}&deg; ${compassDir(bearing)}</span></div>
-    <div class="gt-row"><span class="gt-label">Distance</span><span class="gt-value">${dist.toFixed(0)} m</span></div>
+    <div class="gt-row"><span class="gt-label">Distance</span><span class="gt-value">${useFeet ? (dist * 3.28084).toFixed(0) + ' ft' : dist.toFixed(0) + ' m'}</span></div>
     <div class="gt-row"><span class="gt-label">Angle to Top</span><span class="gt-value">${angleToTop.toFixed(1)}&deg;</span></div>
-    <div class="gt-row"><span class="gt-label">Satellite Est.</span><span class="gt-value">${t.height_m} m &pm;${t.error_m}</span></div>
+    <div class="gt-row"><span class="gt-label">Satellite Est.</span><span class="gt-value">${fmtH(t.height_m)} &pm;${fmtH1(t.error_m)}</span></div>
   `;
 }
 
@@ -838,29 +887,31 @@ function calculateHeight() {
   if (absDelta > 10) deltaClass = 'far';
   else if (absDelta > 5) deltaClass = 'off';
 
-  let deltaLabel = delta >= 0 ? `+${delta.toFixed(1)}` : delta.toFixed(1);
+  const deltaDisp = useFeet ? Math.abs(delta * 3.28084).toFixed(1) : absDelta.toFixed(1);
+  const deltaSign = delta >= 0 ? '+' : '-';
+  const deltaLabel = `${deltaSign}${useFeet ? (Math.abs(delta) * 3.28084).toFixed(1) + ' ft' : delta.toFixed(1) + ' m'}`;
 
   resultDiv.innerHTML = `
     <div class="gt-result">
       <div class="gt-result-row">
         <span class="gt-result-label">Measured Height</span>
-        <span class="gt-result-value">${measuredHeight.toFixed(1)} m</span>
+        <span class="gt-result-value">${fmtH1(measuredHeight)}</span>
       </div>
       <div class="gt-result-row">
         <span class="gt-result-label">Satellite Estimate</span>
-        <span class="gt-result-value">${satH} m ±${gtSelectedTree ? gtSelectedTree.error_m : '?'}</span>
+        <span class="gt-result-value">${fmtH(satH)} ±${fmtH1(gtSelectedTree ? gtSelectedTree.error_m : 0)}</span>
       </div>
       <div class="gt-result-row">
         <span class="gt-result-label">Difference</span>
-        <span class="gt-result-delta ${deltaClass}">${deltaLabel} m</span>
+        <span class="gt-result-delta ${deltaClass}">${deltaLabel}</span>
       </div>
       <div class="gt-result-row">
         <span class="gt-result-label">Horiz. Dist (top)</span>
-        <span class="gt-result-value">${horizTop.toFixed(1)} m</span>
+        <span class="gt-result-value">${fmtH1(horizTop)}</span>
       </div>
       <div class="gt-result-row">
         <span class="gt-result-label">Horiz. Dist (base)</span>
-        <span class="gt-result-value">${horizBase.toFixed(1)} m</span>
+        <span class="gt-result-value">${fmtH1(horizBase)}</span>
       </div>
     </div>
   `;

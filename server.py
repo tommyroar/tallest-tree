@@ -17,7 +17,7 @@ import numpy as np
 import rasterio
 import rasterio.transform
 import rasterio.windows
-from flask import Flask, Response, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from PIL import Image
 from scipy.ndimage import gaussian_filter, maximum_filter
@@ -26,13 +26,15 @@ from scipy.spatial import cKDTree
 # ---------------------------------------------------------------------------
 # GDAL / rasterio environment — must be set before any dataset is opened
 # ---------------------------------------------------------------------------
-os.environ.update({
-    "AWS_NO_SIGN_REQUEST": "YES",
-    "GDAL_DISABLE_READDIR_ON_OPEN": "TRUE",
-    "VSI_CACHE": "TRUE",
-    "VSI_CACHE_SIZE": "104857600",
-    "GDAL_HTTP_MERGE_CONSECUTIVE_RANGES": "YES",
-})
+os.environ.update(
+    {
+        "AWS_NO_SIGN_REQUEST": "YES",
+        "GDAL_DISABLE_READDIR_ON_OPEN": "TRUE",
+        "VSI_CACHE": "TRUE",
+        "VSI_CACHE_SIZE": "104857600",
+        "GDAL_HTTP_MERGE_CONSECUTIVE_RANGES": "YES",
+    }
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -51,11 +53,11 @@ PNW_LON_MIN, PNW_LON_MAX = -126.0, -115.0
 
 # Tree classification tiers
 TIERS = [
-    ("Global",   90.0, float("inf"), "#ff4444"),
-    ("National", 80.0, 90.0,         "#ff8800"),
-    ("Regional", 70.0, 80.0,         "#ffcc00"),
-    ("Tall",     50.0, 70.0,         "#44bb44"),
-    ("Common",   0.0,  50.0,         "#6688aa"),
+    ("Global", 90.0, float("inf"), "#ff4444"),
+    ("National", 80.0, 90.0, "#ff8800"),
+    ("Regional", 70.0, 80.0, "#ffcc00"),
+    ("Tall", 50.0, 70.0, "#44bb44"),
+    ("Common", 0.0, 50.0, "#6688aa"),
 ]
 
 MAE = 2.8  # ±metres mean absolute error
@@ -72,9 +74,11 @@ CORS(app)
 def index():
     return app.send_static_file("index.html")
 
+
 # ---------------------------------------------------------------------------
 # Geo helpers
 # ---------------------------------------------------------------------------
+
 
 def _latlon_to_web_mercator(lat: float, lon: float) -> tuple[float, float]:
     """WGS‑84 → EPSG:3857 (metres)."""
@@ -152,6 +156,7 @@ def _open_tile(url: str) -> rasterio.DatasetReader:
 # Core analysis
 # ---------------------------------------------------------------------------
 
+
 def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
     """Read CHM data around (lat, lon), detect tree tops, return results dict."""
     cx, cy = _latlon_to_web_mercator(lat, lon)
@@ -192,7 +197,11 @@ def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
     chm = np.nan_to_num(chm, nan=0.0)
 
     if chm.size == 0 or chm.max() == 0:
-        return {"trees": [], "stats": {"max_height": 0, "mean_height": 0, "area_m2": 0, "n_trees": 0}, "overlay_key": None}
+        return {
+            "trees": [],
+            "stats": {"max_height": 0, "mean_height": 0, "area_m2": 0, "n_trees": 0},
+            "overlay_key": None,
+        }
 
     # Smooth + local‑max detection
     smoothed = gaussian_filter(chm, sigma=1.0)
@@ -226,15 +235,17 @@ def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
         mx, my = rasterio.transform.xy(win_transform, int(r), int(c))
         tree_lat, tree_lon = _mercator_to_latlon(mx, my)
         tier, colour = _classify(float(h))
-        trees.append({
-            "rank": len(trees) + 1,
-            "height_m": round(float(h), 1),
-            "error_m": MAE,
-            "lat": tree_lat,
-            "lon": tree_lon,
-            "tier": tier,
-            "colour": colour,
-        })
+        trees.append(
+            {
+                "rank": len(trees) + 1,
+                "height_m": round(float(h), 1),
+                "error_m": MAE,
+                "lat": tree_lat,
+                "lon": tree_lon,
+                "tier": tier,
+                "colour": colour,
+            }
+        )
 
     # Grayscale RGBA overlay
     norm = np.clip(chm / max(chm.max(), 1.0), 0, 1)
@@ -281,6 +292,7 @@ def _analyze(lat: float, lon: float, window_m: int = 1000) -> dict:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @app.route("/api/analyze")
 def analyze():
     try:
@@ -290,7 +302,11 @@ def analyze():
         return jsonify({"error": "lat and lon query params required"}), 400
 
     if not (PNW_LAT_MIN <= lat <= PNW_LAT_MAX and PNW_LON_MIN <= lon <= PNW_LON_MAX):
-        return jsonify({"error": f"Coordinates outside PNW bounds ({PNW_LAT_MIN}–{PNW_LAT_MAX}°N, {PNW_LON_MIN}–{PNW_LON_MAX}°W)"}), 400
+        return jsonify(
+            {
+                "error": f"Coordinates outside PNW bounds ({PNW_LAT_MIN}–{PNW_LAT_MAX}°N, {PNW_LON_MIN}–{PNW_LON_MAX}°W)"
+            }
+        ), 400
 
     window_m = int(request.args.get("window", 1000))
     window_m = max(100, min(2000, window_m))
@@ -321,12 +337,14 @@ def health():
         with urllib.request.urlopen(req, timeout=10) as resp:
             content_length = resp.headers.get("Content-Length", "unknown")
             content_type = resp.headers.get("Content-Type", "unknown")
-        return jsonify({
-            "status": "ok",
-            "tile": HEALTH_CHECK_TILE,
-            "content_length": content_length,
-            "content_type": content_type,
-        })
+        return jsonify(
+            {
+                "status": "ok",
+                "tile": HEALTH_CHECK_TILE,
+                "content_length": content_length,
+                "content_type": content_type,
+            }
+        )
     except Exception as exc:
         return jsonify({"status": "error", "detail": str(exc)}), 503
 

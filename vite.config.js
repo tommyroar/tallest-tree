@@ -11,6 +11,7 @@ const hasCerts = fs.existsSync(certFile) && fs.existsSync(keyFile)
 export default defineConfig({
   test: {
     environment: 'jsdom',
+    include: ['tests/**/*.test.{js,ts}'],
   },
   server: {
     port: 5180,

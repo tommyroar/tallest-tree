@@ -4,3 +4,5 @@ scipy
 flask
 flask-cors
 Pillow
+ruff
+pytest

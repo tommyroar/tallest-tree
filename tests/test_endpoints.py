@@ -1,13 +1,14 @@
 """Integration tests for Flask endpoints."""
 
 import json
-from unittest.mock import patch, MagicMock
-import pytest
+from unittest.mock import MagicMock, patch
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # Fast tests (no S3)
 # ---------------------------------------------------------------------------
+
 
 class TestFastEndpoints:
     def test_index_returns_html(self, client):
@@ -67,6 +68,7 @@ class TestFastEndpoints:
 # ---------------------------------------------------------------------------
 # Slow tests (real S3)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.slow
 class TestSlowEndpoints:

@@ -9,20 +9,14 @@ const keyFile = path.join(certDir, `${tsHost}.key`)
 const hasCerts = fs.existsSync(certFile) && fs.existsSync(keyFile)
 
 export default defineConfig({
+  base: '/',
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.{js,ts}'],
   },
   server: {
-    port: 5180,
-    strictPort: true,
-    allowedHosts: [tsHost],
-    ...(hasCerts && {
-      https: {
-        cert: certFile,
-        key: keyFile,
-      },
-    }),
+    port: 5177,
+    allowedHosts: [tsHost, "tommys-mac-mini.local"],
     proxy: {
       '/api': 'http://localhost:5111',
       '/tallest-trees/api': {

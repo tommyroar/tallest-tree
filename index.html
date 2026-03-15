@@ -192,6 +192,59 @@
   .gt-result-delta.off { color: #ff8800; }
   .gt-result-delta.far { color: #ff4444; }
 
+  /* ---- Mode tab toggle ---- */
+  .gt-mode-tabs {
+    display: flex; gap: 0; background: #0c0e13; border: 1px solid #2a2e3a;
+    border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+  }
+  .gt-mode-tab {
+    flex: 1; padding: 6px 0; text-align: center; cursor: pointer;
+    font-size: 11px; font-weight: 600; color: #5a6070;
+    background: none; border: none;
+    font-family: 'JetBrains Mono', monospace;
+    transition: background .15s, color .15s;
+  }
+  .gt-mode-tab.active { background: #1e2230; color: #e4e8f0; }
+
+  /* ---- Survival mode ---- */
+  .sv-sub-label {
+    font-size: 10px; text-transform: uppercase; color: #3d8b40;
+    letter-spacing: .08em; margin: 10px 0 6px;
+  }
+  .sv-sub-label:first-child { margin-top: 0; }
+  .sv-hint {
+    font-size: 10px; color: #3a3f50; line-height: 1.5; margin-bottom: 8px;
+  }
+  .sv-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sv-ratio {
+    font-size: 11px; color: #5a6070; text-align: center;
+    margin-top: 4px; padding: 4px; background: #0c0e13; border-radius: 4px;
+  }
+  .sv-ratio span { color: #6dce70; font-weight: 700; }
+
+  /* Ranger beads */
+  .sv-beads-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+  .sv-beads-label { font-size: 10px; color: #5a6070; width: 36px; flex-shrink: 0; }
+  .sv-beads { display: flex; gap: 5px; flex: 1; }
+  .sv-bead {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #1e2230; border: 2px solid #2a2e3a;
+    cursor: pointer; flex-shrink: 0; transition: background .1s, border-color .1s;
+  }
+  .sv-bead.active { background: #e4e8f0; border-color: #e4e8f0; }
+  .sv-bead.upper.active { background: #6dce70; border-color: #6dce70; }
+  .sv-beads-reset {
+    font-size: 18px; line-height: 1; background: none; border: none;
+    color: #3a3f50; cursor: pointer; padding: 2px 4px;
+  }
+  .sv-beads-reset:hover { color: #8a90a0; }
+  .sv-pace-display {
+    font-size: 11px; color: #5a6070; background: #0c0e13;
+    border-radius: 4px; padding: 6px 8px; margin-top: 4px;
+    display: flex; justify-content: space-between;
+  }
+  .sv-pace-display span { color: #e4e8f0; font-weight: 700; }
+
   /* Locate button */
   .leaflet-control-locate a {
     display: flex; align-items: center; justify-content: center;
@@ -275,20 +328,75 @@
       <div id="gt-gps-info" style="font-size:11px; color:#5a6070; margin-top:6px;"></div>
     </div>
     <div class="gt-section">
-      <div class="gt-section-label">Rangefinder Measurement</div>
-      <div class="gt-form" id="gt-form">
-        <label for="gt-dist-top">LOS Distance to Crown (m)</label>
-        <input type="number" id="gt-dist-top" step="0.1" placeholder="e.g. 85.2" />
-        <label for="gt-angle-top">Inclination Angle to Crown (&deg;)</label>
-        <input type="number" id="gt-angle-top" step="0.1" placeholder="e.g. 42.5" />
-        <label for="gt-dist-base">LOS Distance to Base (m)</label>
-        <input type="number" id="gt-dist-base" step="0.1" placeholder="e.g. 63.0" />
-        <label for="gt-angle-base">Declination Angle to Base (&deg;)</label>
-        <input type="number" id="gt-angle-base" step="0.1" placeholder="e.g. -5.2" />
-        <label for="gt-eye-height">Eye Height (m)</label>
-        <input type="number" id="gt-eye-height" step="0.01" value="1.65" />
-        <button class="gt-calc-btn" id="gt-calc-btn" onclick="calculateHeight()">Calculate Tree Height</button>
+      <div class="gt-section-label">Measurement</div>
+      <div class="gt-mode-tabs">
+        <button class="gt-mode-tab active" id="tab-rangefinder" onclick="setMeasureMode('rangefinder')">Rangefinder</button>
+        <button class="gt-mode-tab" id="tab-survival" onclick="setMeasureMode('survival')">Survival</button>
       </div>
+
+      <!-- Rangefinder form -->
+      <div id="gt-form-rangefinder">
+        <div class="gt-form">
+          <label for="gt-dist-top">LOS Distance to Crown (m)</label>
+          <input type="number" id="gt-dist-top" step="0.1" placeholder="e.g. 85.2" />
+          <label for="gt-angle-top">Inclination Angle to Crown (&deg;)</label>
+          <input type="number" id="gt-angle-top" step="0.1" placeholder="e.g. 42.5" />
+          <label for="gt-dist-base">LOS Distance to Base (m)</label>
+          <input type="number" id="gt-dist-base" step="0.1" placeholder="e.g. 63.0" />
+          <label for="gt-angle-base">Declination Angle to Base (&deg;)</label>
+          <input type="number" id="gt-angle-base" step="0.1" placeholder="e.g. -5.2" />
+          <label for="gt-eye-height">Eye Height (m)</label>
+          <input type="number" id="gt-eye-height" step="0.01" value="1.65" />
+          <button class="gt-calc-btn" onclick="calculateHeight()">Calculate Tree Height</button>
+        </div>
+      </div>
+
+      <!-- Survival form -->
+      <div id="gt-form-survival" style="display:none">
+        <div class="gt-form">
+          <div class="sv-sub-label">📐 Unit Stick</div>
+          <p class="sv-hint">Hold stick vertically at arm's length. Walk back until the stick exactly covers the tree from base to crown. That distance equals the tree height × (stick ÷ arm).</p>
+          <div class="sv-two-col">
+            <div>
+              <label for="sv-arm">Arm length (cm)</label>
+              <input type="number" id="sv-arm" step="1" value="65" oninput="updateSvRatio()" />
+            </div>
+            <div>
+              <label for="sv-stick">Stick length (cm)</label>
+              <input type="number" id="sv-stick" step="1" value="65" oninput="updateSvRatio()" />
+            </div>
+          </div>
+          <div class="sv-ratio">Ratio: <span id="sv-ratio-val">1.00</span> — distance × ratio = height</div>
+
+          <div class="sv-sub-label">📿 Ranger Beads (pace count)</div>
+          <p class="sv-hint">Count your paces to the tree. Each bead = <span id="sv-ppb-label">10</span> paces. Fill upper beads after every 9 lower beads.</p>
+          <div class="sv-beads-row">
+            <span class="sv-beads-label">×1</span>
+            <div class="sv-beads" id="sv-lower-beads"></div>
+            <button class="sv-beads-reset" onclick="resetBeads()" title="Reset">↺</button>
+          </div>
+          <div class="sv-beads-row">
+            <span class="sv-beads-label">×9</span>
+            <div class="sv-beads" id="sv-upper-beads"></div>
+          </div>
+          <div class="sv-two-col" style="margin-top:8px">
+            <div>
+              <label for="sv-ppb">Paces per bead</label>
+              <input type="number" id="sv-ppb" step="1" value="10" min="1" oninput="updateSvPaceDisplay()" />
+            </div>
+            <div>
+              <label for="sv-pace-len">Pace length (m)</label>
+              <input type="number" id="sv-pace-len" step="0.01" value="0.76" oninput="updateSvPaceDisplay()" />
+            </div>
+          </div>
+          <div class="sv-pace-display">
+            <span>Paces</span><span id="sv-total-paces">0</span>
+            <span>Distance</span><span id="sv-total-dist">0.0 m</span>
+          </div>
+          <button class="gt-calc-btn" style="margin-top:10px" onclick="calculateSurvivalHeight()">Calculate Tree Height</button>
+        </div>
+      </div>
+
       <div id="gt-result"></div>
     </div>
   </div>
@@ -735,6 +843,8 @@ function openGtModal(tree) {
 
   // Reset measurement form
   document.getElementById('gt-result').innerHTML = '';
+  initBeads();
+  updateSvRatio();
 
   updateNavigation();
   overlay.classList.add('active');
@@ -912,6 +1022,139 @@ function calculateHeight() {
       <div class="gt-result-row">
         <span class="gt-result-label">Horiz. Dist (base)</span>
         <span class="gt-result-value">${fmtH1(horizBase)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// ---- Measurement mode toggle ----
+let measureMode = 'rangefinder';
+
+function setMeasureMode(mode) {
+  measureMode = mode;
+  document.getElementById('tab-rangefinder').classList.toggle('active', mode === 'rangefinder');
+  document.getElementById('tab-survival').classList.toggle('active', mode === 'survival');
+  document.getElementById('gt-form-rangefinder').style.display = mode === 'rangefinder' ? '' : 'none';
+  document.getElementById('gt-form-survival').style.display = mode === 'survival' ? '' : 'none';
+  document.getElementById('gt-result').innerHTML = '';
+}
+
+// ---- Survival mode — ranger beads ----
+let svLower = 0; // 0–9
+let svUpper = 0; // 0–4
+
+function initBeads() {
+  const lowerEl = document.getElementById('sv-lower-beads');
+  const upperEl = document.getElementById('sv-upper-beads');
+  lowerEl.innerHTML = '';
+  upperEl.innerHTML = '';
+  for (let i = 0; i < 9; i++) {
+    const b = document.createElement('div');
+    b.className = 'sv-bead' + (i < svLower ? ' active' : '');
+    b.dataset.idx = i;
+    b.addEventListener('click', () => {
+      // Clicking bead i sets lower count to i+1 (or 0 if already at i+1)
+      svLower = svLower === i + 1 ? 0 : i + 1;
+      refreshBeads();
+    });
+    lowerEl.appendChild(b);
+  }
+  for (let i = 0; i < 4; i++) {
+    const b = document.createElement('div');
+    b.className = 'sv-bead upper' + (i < svUpper ? ' active' : '');
+    b.dataset.idx = i;
+    b.addEventListener('click', () => {
+      svUpper = svUpper === i + 1 ? 0 : i + 1;
+      refreshBeads();
+    });
+    upperEl.appendChild(b);
+  }
+}
+
+function refreshBeads() {
+  document.querySelectorAll('#sv-lower-beads .sv-bead').forEach((b, i) => {
+    b.classList.toggle('active', i < svLower);
+  });
+  document.querySelectorAll('#sv-upper-beads .sv-bead').forEach((b, i) => {
+    b.classList.toggle('active', i < svUpper);
+  });
+  updateSvPaceDisplay();
+}
+
+function resetBeads() {
+  svLower = 0;
+  svUpper = 0;
+  refreshBeads();
+}
+
+function updateSvPaceDisplay() {
+  const ppb = Math.max(1, parseFloat(document.getElementById('sv-ppb').value) || 10);
+  const paceLen = Math.max(0.1, parseFloat(document.getElementById('sv-pace-len').value) || 0.76);
+  const totalPaces = (svUpper * 9 + svLower) * ppb;
+  const dist = totalPaces * paceLen;
+  document.getElementById('sv-total-paces').textContent = totalPaces;
+  document.getElementById('sv-total-dist').textContent = useFeet
+    ? (dist * 3.28084).toFixed(1) + ' ft'
+    : dist.toFixed(1) + ' m';
+  document.getElementById('sv-ppb-label').textContent = ppb;
+}
+
+function updateSvRatio() {
+  const arm = parseFloat(document.getElementById('sv-arm').value) || 65;
+  const stick = parseFloat(document.getElementById('sv-stick').value) || 65;
+  document.getElementById('sv-ratio-val').textContent = (stick / arm).toFixed(2);
+}
+
+function calculateSurvivalHeight() {
+  const arm = parseFloat(document.getElementById('sv-arm').value) || 65;
+  const stick = parseFloat(document.getElementById('sv-stick').value) || 65;
+  const ppb = Math.max(1, parseFloat(document.getElementById('sv-ppb').value) || 10);
+  const paceLen = Math.max(0.1, parseFloat(document.getElementById('sv-pace-len').value) || 0.76);
+
+  const totalPaces = (svUpper * 9 + svLower) * ppb;
+  const dist = totalPaces * paceLen;
+  const measuredHeight = dist * (stick / arm);
+
+  const resultDiv = document.getElementById('gt-result');
+
+  if (totalPaces === 0) {
+    resultDiv.innerHTML = '<div style="color:#ff4444; font-size:11px; margin-top:8px;">No paces counted — use the beads to record your distance.</div>';
+    return;
+  }
+  if (measuredHeight <= 0 || measuredHeight > 200) {
+    resultDiv.innerHTML = '<div style="color:#ff4444; font-size:11px; margin-top:8px;">Result out of range — check your bead count and stick ratio.</div>';
+    return;
+  }
+
+  const satH = gtSelectedTree ? gtSelectedTree.height_m : 0;
+  const delta = measuredHeight - satH;
+  const absDelta = Math.abs(delta);
+  let deltaClass = 'close';
+  if (absDelta > 10) deltaClass = 'far';
+  else if (absDelta > 5) deltaClass = 'off';
+  const deltaLabel = (delta >= 0 ? '+' : '') + (useFeet ? (delta * 3.28084).toFixed(1) + ' ft' : delta.toFixed(1) + ' m');
+
+  resultDiv.innerHTML = `
+    <div class="gt-result">
+      <div class="gt-result-row">
+        <span class="gt-result-label">Measured Height</span>
+        <span class="gt-result-value">${fmtH1(measuredHeight)}</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Distance to tree</span>
+        <span class="gt-result-value">${fmtH1(dist)}</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Stick ratio</span>
+        <span class="gt-result-value">${(stick / arm).toFixed(2)}</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Satellite Estimate</span>
+        <span class="gt-result-value">${fmtH(satH)} ±${fmtH1(gtSelectedTree ? gtSelectedTree.error_m : 0)}</span>
+      </div>
+      <div class="gt-result-row">
+        <span class="gt-result-label">Difference</span>
+        <span class="gt-result-delta ${deltaClass}">${deltaLabel}</span>
       </div>
     </div>
   `;

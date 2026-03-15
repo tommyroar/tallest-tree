@@ -1,18 +1,24 @@
 """Unit tests for pure helper functions in server.py."""
 
 import collections
-import math
-import pytest
-from server import (
-    _latlon_to_web_mercator, _latlon_to_quadkey, _tile_origin_meters,
-    _classify, _mercator_to_latlon, _open_tile, _overlay_cache,
-    OVERLAY_CACHE_MAX,
-)
 
+import pytest
+
+from server import (
+    OVERLAY_CACHE_MAX,
+    _classify,
+    _latlon_to_quadkey,
+    _latlon_to_web_mercator,
+    _mercator_to_latlon,
+    _open_tile,
+    _overlay_cache,
+    _tile_origin_meters,
+)
 
 # ---------------------------------------------------------------------------
 # _latlon_to_web_mercator
 # ---------------------------------------------------------------------------
+
 
 class TestLatLonToWebMercator:
     def test_origin(self):
@@ -39,6 +45,7 @@ class TestLatLonToWebMercator:
 # ---------------------------------------------------------------------------
 # _latlon_to_quadkey
 # ---------------------------------------------------------------------------
+
 
 class TestLatLonToQuadKey:
     def test_known_location(self):
@@ -69,6 +76,7 @@ class TestLatLonToQuadKey:
 # _tile_origin_meters
 # ---------------------------------------------------------------------------
 
+
 class TestTileOriginMeters:
     def test_quadkey_0(self):
         # QuadKey "0" is top-left quarter of the world at zoom 1
@@ -91,6 +99,7 @@ class TestTileOriginMeters:
 # ---------------------------------------------------------------------------
 # _classify
 # ---------------------------------------------------------------------------
+
 
 class TestClassify:
     def test_global(self):
@@ -129,6 +138,7 @@ class TestClassify:
 # _mercator_to_latlon
 # ---------------------------------------------------------------------------
 
+
 class TestMercatorToLatlon:
     def test_origin(self):
         lat, lon = _mercator_to_latlon(0, 0)
@@ -153,6 +163,7 @@ class TestMercatorToLatlon:
 # ---------------------------------------------------------------------------
 # Overlay cache eviction
 # ---------------------------------------------------------------------------
+
 
 class TestOverlayCacheEviction:
     def test_cache_is_ordered_dict(self):
@@ -182,9 +193,10 @@ class TestOverlayCacheEviction:
 # _open_tile caching
 # ---------------------------------------------------------------------------
 
+
 class TestOpenTileCache:
     def test_lru_cache_is_configured(self):
         """_open_tile should be wrapped with lru_cache."""
-        assert hasattr(_open_tile, 'cache_info'), "_open_tile should use lru_cache"
+        assert hasattr(_open_tile, "cache_info"), "_open_tile should use lru_cache"
         info = _open_tile.cache_info()
         assert info.maxsize == 32

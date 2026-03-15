@@ -18,9 +18,9 @@ export default defineConfig({
     port: 5177,
     allowedHosts: [tsHost, "tommys-mac-mini.local"],
     proxy: {
-      '/api': 'http://localhost:5111',
+      '/api': 'http://127.0.0.1:5111',
       '/tallest-trees/api': {
-        target: 'http://localhost:5111',
+        target: 'http://127.0.0.1:5111',
         rewrite: (p) => p.replace(/^\/tallest-trees/, ''),
       },
     },

@@ -526,7 +526,7 @@ let clickMarker = null;
 
 // Derive API base from current page path so it works behind subpath proxies
 // e.g. /tallest-trees -> /tallest-trees, / -> (empty string)
-const API = window.location.pathname.replace(/\/+$/, '');
+const API = window.location.pathname.replace(/\/+$/, '').replace(/\/index\.html$/, '');
 
 // ---- Click handler ----
 let _flyingTo = false;
@@ -728,7 +728,7 @@ function renderForest(trees, centerLat, centerLon) {
     const fill = `rgb(${grey},${grey},${grey})`;
 
     const use = document.createElementNS(SVG_NS, 'use');
-    use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + sil.id);
+    use.setAttribute('href', '#' + sil.id);
     use.setAttribute('x', x);
     use.setAttribute('y', y);
     use.setAttribute('width', treePxW);

@@ -13,7 +13,9 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "deploy": "scripts/deploy.sh",
+    "deploy": "scripts/deploy.sh start",
+    "deploy:stop": "scripts/deploy.sh stop",
+    "deploy:status": "scripts/deploy.sh status",
     "test": "vitest run",
     "test:watch": "vitest"
   },

@@ -129,6 +129,47 @@ job "tallest-tree" {
       }
     }
 
+    task "cleanup" {
+      driver = "raw_exec"
+
+      lifecycle {
+        hook = "poststop"
+      }
+
+      env {
+        PATH = "/Users/tommydoerr/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+        HOME = "/Users/tommydoerr"
+      }
+
+      config {
+        command = "/bin/bash"
+        args = [
+          "-c",
+          <<-EOT
+          REPO="tommyroar/tallest-tree"
+
+          # Mark GitHub deployments inactive
+          for env in nomad-vite nomad-python; do
+            DEPLOY_IDS=$(gh api "repos/$REPO/deployments?environment=$env&per_page=5" --jq '.[].id' 2>/dev/null)
+            for id in $DEPLOY_IDS; do
+              gh api "repos/$REPO/deployments/$id/statuses" \
+                -f state=inactive \
+                --silent 2>/dev/null && echo "Deactivated $env deployment #$id"
+            done
+          done
+
+          # Remove Tailscale serve route
+          tailscale serve --set-path /tallest-trees off 2>/dev/null && echo "Tailscale serve removed"
+          EOT
+        ]
+      }
+
+      resources {
+        cpu    = 100
+        memory = 64
+      }
+    }
+
     task "tailscale-serve" {
       driver = "raw_exec"
 

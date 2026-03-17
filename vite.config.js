@@ -15,7 +15,8 @@ export default defineConfig({
     include: ['tests/**/*.test.{js,ts}'],
   },
   server: {
-    port: 5177,
+    port: 5180,
+    strictPort: true,
     allowedHosts: [tsHost, "tommys-mac-mini.local"],
     proxy: {
       '/api': 'http://127.0.0.1:5111',

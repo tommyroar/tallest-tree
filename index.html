@@ -485,10 +485,10 @@ const LocateControl = L.Control.extend({
   _locate(e) {
     L.DomEvent.preventDefault(e);
     const self = this;
+    const locateSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
     if (!window.isSecureContext) {
-      self._container.title = 'Geolocation requires HTTPS';
+      self._container.title = 'GPS requires HTTPS — use the Tailscale URL';
       self._container.classList.add('error');
-      console.warn('Locate: geolocation requires a secure context (HTTPS or localhost)');
       return;
     }
     if (!navigator.geolocation) {
@@ -496,24 +496,29 @@ const LocateControl = L.Control.extend({
       self._container.classList.add('error');
       return;
     }
-    self._link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+    self._link.innerHTML = locateSvg.replace('</svg>', '<animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/></svg>');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         self._map.flyTo([latitude, longitude], 14);
         self._container.classList.add('active');
         self._container.classList.remove('error');
-        self._link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+        self._link.innerHTML = locateSvg;
+        self._container.title = 'Show my location';
         if (self._marker) self._map.removeLayer(self._marker);
         self._marker = L.circleMarker([latitude, longitude], {
           radius: 8, color: '#3d8b40', weight: 2, fillColor: '#3d8b40', fillOpacity: 0.3,
         }).addTo(self._map).bindTooltip('You', { permanent: true, direction: 'top' });
       },
       (err) => {
-        console.warn('Locate failed:', err.message);
         self._container.classList.add('error');
-        self._container.title = 'Location error: ' + err.message;
-        self._link.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>';
+        self._link.innerHTML = locateSvg;
+        switch (err.code) {
+          case 1: self._container.title = 'Location permission denied'; break;
+          case 2: self._container.title = 'Position unavailable — no GPS signal'; break;
+          case 3: self._container.title = 'GPS timed out'; break;
+          default: self._container.title = 'Location error: ' + (err.message || 'unknown');
+        }
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
@@ -554,6 +559,16 @@ map.on('click', async (e) => {
 
   try {
     const resp = await fetch(`${API}/api/analyze?lat=${lat.toFixed(6)}&lon=${lng.toFixed(6)}&window=1000`);
+
+    if (!resp.ok) {
+      const ct = resp.headers.get('content-type') || '';
+      const msg = ct.includes('application/json')
+        ? (await resp.json()).error || `Server error (${resp.status})`
+        : `Backend unavailable (${resp.status})`;
+      alert(msg);
+      return;
+    }
+
     const data = await resp.json();
 
     if (data.error) { alert(data.error); return; }
@@ -859,15 +874,21 @@ function closeGtModal() {
 function acquireGPS() {
   const btn = document.getElementById('gt-gps-btn');
   const info = document.getElementById('gt-gps-info');
-  btn.textContent = 'Acquiring...';
-  btn.disabled = true;
 
-  if (!navigator.geolocation) {
-    info.textContent = 'Geolocation not supported';
+  if (!window.isSecureContext) {
+    info.textContent = 'GPS requires HTTPS — use the Tailscale URL';
     btn.textContent = 'Use GPS Location';
-    btn.disabled = false;
     return;
   }
+
+  if (!navigator.geolocation) {
+    info.textContent = 'Geolocation not supported by this browser';
+    btn.textContent = 'Use GPS Location';
+    return;
+  }
+
+  btn.textContent = 'Acquiring...';
+  btn.disabled = true;
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
@@ -886,9 +907,21 @@ function acquireGPS() {
       if (gtSelectedTree) updateNavigation();
     },
     (err) => {
-      info.textContent = 'GPS error: ' + err.message;
-      btn.textContent = 'Retry GPS';
       btn.disabled = false;
+      btn.textContent = 'Retry GPS';
+      switch (err.code) {
+        case 1: // PERMISSION_DENIED
+          info.textContent = 'Location permission denied — check browser settings';
+          break;
+        case 2: // POSITION_UNAVAILABLE
+          info.textContent = 'Position unavailable — no GPS signal';
+          break;
+        case 3: // TIMEOUT
+          info.textContent = 'GPS timed out — try moving outdoors';
+          break;
+        default:
+          info.textContent = 'GPS error: ' + (err.message || 'unknown');
+      }
     },
     { enableHighAccuracy: true, timeout: 15000 }
   );

@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "Auto Commit",
+  "description": "Stages all changes, generates a concise commit message from the diff, and commits — bypassing the VS Code commit editor UI entirely.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run `git diff --cached --stat` (and `git diff --stat` for unstaged changes). If there are no staged changes, stage everything with `git add -A` first. Then look at the diff summary, generate a concise commit message following the project convention (lowercase, descriptive), and run `git commit -m \"your generated message\"`. Do NOT open any editor. Do NOT ask the user to confirm — just commit it."
+  }
+}

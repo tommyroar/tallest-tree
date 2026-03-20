@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Playwright API Error Test",
+  "description": "Runs the Playwright API error handling test against the Vite dev server (no Flask). Verifies graceful error when backend is unavailable. Requires Vite running on port 5180.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "node tests/test_api_error.js",
+    "timeout": 30
+  }
+}

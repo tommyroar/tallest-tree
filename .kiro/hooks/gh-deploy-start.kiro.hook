@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "GitHub Deploy Start",
+  "description": "Creates GitHub deployment records and marks them as in_progress when a dev server is started through the MCP dev_server_start tool",
+  "version": "1",
+  "when": {
+    "type": "preToolUse",
+    "toolTypes": [
+      ".*dev_server_start.*"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "bash scripts/gh-deploy-status.sh start"
+  }
+}

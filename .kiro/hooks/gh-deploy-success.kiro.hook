@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "GitHub Deploy Success",
+  "description": "Marks GitHub deployment records as success after a dev server is successfully started through the MCP dev_server_start tool",
+  "version": "1",
+  "when": {
+    "type": "postToolUse",
+    "toolTypes": [
+      ".*dev_server_start.*"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "bash scripts/gh-deploy-status.sh success"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Vitest Tests",
+  "description": "Runs vitest in single-run mode when JS test files or index.html are saved.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "tests/*.test.js",
+      "index.html"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "npx vitest run --reporter=verbose"
+  }
+}

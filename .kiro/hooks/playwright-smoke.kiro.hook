@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "Playwright Smoke Test",
+  "description": "Runs the Playwright smoke test against a live Flask server. Spawns Flask, opens headless Chromium, validates UI loads and map click produces tree results.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "node tests/test_smoke.js",
+    "timeout": 120
+  }
+}

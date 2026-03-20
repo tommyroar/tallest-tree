@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "name": "MCP Server Tests",
+  "description": "Runs Node.js built-in test runner for the MCP dev-server when its files are saved.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "mcp/dev-server/**/*.js"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "node --test mcp/dev-server/test/*.test.js"
+  }
+}

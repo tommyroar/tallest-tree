@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Python Tests",
+  "description": "Runs pytest (excluding slow S3 tests) when Python files in server.py or tests/ are saved.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "server.py",
+      "tests/test_*.py",
+      "tests/conftest.py"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "source .venv/bin/activate && pytest -m \"not slow\" --tb=short -q"
+  }
+}

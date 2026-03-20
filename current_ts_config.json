@@ -1,0 +1,46 @@
+{
+  "version": "0.0.1",
+  "Web": {
+    "tommys-mac-mini.tail59a169.ts.net:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:5177"
+        },
+        "/api": {
+          "Proxy": "http://127.0.0.1:8001/api"
+        },
+        "/classify": {
+          "Proxy": "http://127.0.0.1:5173/classify/"
+        },
+        "/data": {
+          "Proxy": "http://127.0.0.1:8001/data"
+        },
+        "/intentcity": {
+          "Proxy": "http://127.0.0.1:5173"
+        },
+        "/servers": {
+          "Proxy": "http://127.0.0.1:9000"
+        },
+        "/tallest-tree": {
+          "Proxy": "http://127.0.0.1:5177"
+        },
+        "/tallest-trees": {
+          "Proxy": "http://127.0.0.1:5177"
+        },
+        "/tallest-tree-pr7": {
+          "Proxy": "http://127.0.0.1:5177"
+        },
+        "/tt-api": {
+          "Proxy": "http://127.0.0.1:8080"
+        }
+      }
+    },
+    "tommys-mac-mini.tail59a169.ts.net:4646": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://127.0.0.1:4646"
+        }
+      }
+    }
+  }
+}

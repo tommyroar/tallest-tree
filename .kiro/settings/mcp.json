@@ -1,15 +1,3 @@
 {
-  "mcpServers": {
-    "dev-server": {
-      "command": "node",
-      "args": ["mcp/dev-server/index.js"],
-      "env": {},
-      "disabled": false,
-      "autoApprove": [
-        "dev_server_status",
-        "dev_server_urls",
-        "port_check"
-      ]
-    }
-  }
+  "mcpServers": {}
 }

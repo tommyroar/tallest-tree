@@ -1,15 +1,9 @@
 import { defineConfig } from 'vite'
-import fs from 'fs'
-import path from 'path'
-
-const certDir = path.join(process.env.HOME, '.claude/certs')
-const tsHost = 'tommys-mac-mini.tail59a169.ts.net'
-const certFile = path.join(certDir, `${tsHost}.crt`)
-const keyFile = path.join(certDir, `${tsHost}.key`)
-const hasCerts = fs.existsSync(certFile) && fs.existsSync(keyFile)
+import basicSsl from '@vitejs/plugin-basic-ssl'
 
 export default defineConfig({
   base: '/',
+  plugins: [basicSsl()],
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.{js,ts}'],
@@ -17,13 +11,9 @@ export default defineConfig({
   server: {
     port: 5180,
     strictPort: true,
-    allowedHosts: [tsHost, "tommys-mac-mini.local"],
+    allowedHosts: true,
     proxy: {
       '/api': 'http://127.0.0.1:5111',
-      '/tallest-trees/api': {
-        target: 'http://127.0.0.1:5111',
-        rewrite: (p) => p.replace(/^\/tallest-trees/, ''),
-      },
     },
   },
 })

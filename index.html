@@ -9,29 +9,80 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Fonts -->
+<!-- Fonts — NPS carved-sign aesthetic -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
 <style>
+  /* ======================================================
+     PNW Canopy Height Explorer — National Park Service Theme
+     Carved wooden signs, warm earth tones, botanical drawings
+     ====================================================== */
+
+  :root {
+    /* NPS Brown palette — carved wood signs */
+    --wood-dark: #3B2517;
+    --wood-mid: #5C3A24;
+    --wood-light: #7A5230;
+    --wood-highlight: #8B6914;
+
+    /* Parchment / cream backgrounds */
+    --parchment: #F5EDDA;
+    --parchment-dark: #E8DCC8;
+    --parchment-deeper: #D4C5A9;
+
+    /* NPS Forest greens */
+    --forest: #2D5F2D;
+    --forest-light: #3E7A3E;
+    --forest-pale: #5A9E5A;
+    --sage: #7A8B6F;
+
+    /* Text on wood backgrounds (painted/routed letters) */
+    --carved-text: #F2E8C9;
+    --carved-text-dim: #C4B898;
+    --ink: #2E1B0E;
+    --ink-light: #5C4033;
+
+    /* Accent colors for tiers */
+    --accent-red: #A0392B;
+    --accent-orange: #C06014;
+    --accent-gold: #B8860B;
+  }
+
   * { margin:0; padding:0; box-sizing:border-box; }
+
   body {
-    font-family: 'DM Sans', sans-serif;
-    background: #0c0e13;
-    color: #d0d4dc;
+    font-family: 'Source Serif 4', 'Georgia', serif;
+    background: var(--parchment);
+    color: var(--ink);
     display: flex;
     flex-direction: column;
     height: 100vh;
     overflow: hidden;
   }
 
-  /* ---- Top Bar ---- */
+  /* ---- Top Bar — wooden sign header ---- */
   #sidebar {
-    background: #11131a;
-    border-bottom: 1px solid #1e2230;
-    font-family: 'JetBrains Mono', monospace;
+    background: var(--wood-dark);
+    border-bottom: 3px solid var(--wood-highlight);
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(46,27,14,.4);
+    position: relative;
+  }
+  /* Subtle wood-grain texture via repeating gradient */
+  #sidebar::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(0,0,0,.03) 1px,
+      transparent 2px,
+      transparent 12px
+    );
+    pointer-events: none;
   }
   #sidebar-header {
     display: flex;
@@ -41,31 +92,35 @@
     cursor: pointer;
     user-select: none;
     transition: background .15s;
-    min-height: 44px;
+    min-height: 48px;
+    position: relative;
   }
-  #sidebar-header:hover { background: #1e2230; }
+  #sidebar-header:hover { background: rgba(255,255,255,.05); }
   #sidebar h2 {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: #e4e8f0;
+    font-family: 'Playfair Display', 'Georgia', serif;
+    font-size: 17px;
+    font-weight: 900;
+    color: var(--carved-text);
     margin: 0;
+    letter-spacing: .04em;
+    text-shadow: 1px 1px 2px rgba(0,0,0,.5);
   }
   #collapse-btn {
-    background: none; border: none; color: #5a6070; cursor: pointer;
+    background: none; border: none; color: var(--carved-text-dim); cursor: pointer;
     font-size: 18px; line-height: 1; padding: 4px 8px; transition: transform .2s;
     pointer-events: none;
   }
   #sidebar.collapsed #collapse-btn { transform: rotate(180deg); }
   #unit-toggle {
-    display: flex; align-items: center; background: #1e2230; border: 1px solid #2d3347;
+    display: flex; align-items: center; background: var(--wood-mid); border: 1px solid var(--wood-highlight);
     border-radius: 4px; overflow: hidden; margin-right: 4px; pointer-events: all;
   }
   #unit-toggle button {
-    background: none; border: none; color: #5a6070; cursor: pointer;
+    background: none; border: none; color: var(--carved-text-dim); cursor: pointer;
     font-size: 11px; font-weight: 600; padding: 3px 7px; transition: background .15s, color .15s;
+    font-family: 'IBM Plex Mono', monospace;
   }
-  #unit-toggle button.active { background: #2d3347; color: #e4e8f0; }
+  #unit-toggle button.active { background: var(--wood-light); color: var(--carved-text); }
   #sidebar-body {
     max-height: 45vh;
     overflow-y: auto;
@@ -79,202 +134,241 @@
     opacity: 0;
     overflow: hidden;
   }
-  .section { padding: 8px 16px 12px; border-top:1px solid #1e2230; }
-  .section-label { font-size:11px; text-transform:uppercase; color:#5a6070; letter-spacing:.08em; margin-bottom:6px; }
+  .section { padding: 8px 16px 12px; border-top:1px solid rgba(255,255,255,.08); }
+  .section-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 11px; text-transform: uppercase; color: var(--carved-text-dim);
+    letter-spacing: .12em; margin-bottom: 6px;
+  }
 
   /* ---- Map ---- */
   #map-wrap { flex:1; position:relative; }
   #map { width:100%; height:100%; }
 
-  /* Desaturate map tiles */
-  .leaflet-tile-pane { filter: saturate(0.3) brightness(0.85); }
+  /* Warm, slightly vintage map tiles */
+  .leaflet-tile-pane { filter: saturate(0.55) sepia(0.15) brightness(0.95); }
   .leaflet-control-attribution { font-size:10px; opacity:.6; }
 
   /* Stats grid */
   .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-  .stat { background:#181b24; border-radius:6px; padding:8px 10px; }
-  .stat .val { font-size:18px; font-weight:700; color:#e4e8f0; }
-  .stat .lbl { font-size:10px; color:#5a6070; text-transform:uppercase; }
+  .stat {
+    background: var(--wood-mid); border-radius: 4px; padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,.06);
+  }
+  .stat .val { font-size: 18px; font-weight: 700; color: var(--carved-text); font-family: 'Playfair Display', serif; }
+  .stat .lbl { font-size: 10px; color: var(--carved-text-dim); text-transform: uppercase; letter-spacing: .06em; }
 
   /* Forest silhouette visualization */
   #forest-section { height: 22vh; min-height: 120px; overflow: hidden; display: flex; flex-direction: column; }
-  #forest-viz { width: 100%; flex: 1 1 auto; min-height: 100px; display: block; background: #0c0e13; }
+  #forest-viz { width: 100%; flex: 1 1 auto; min-height: 100px; display: block; background: var(--wood-dark); }
   #forest-viz .tree-sil {
     cursor: pointer;
     transition: opacity .15s, filter .15s;
   }
-  #forest-viz .tree-sil:hover { filter: brightness(2); }
-  #forest-viz .tree-sil.highlighted { filter: brightness(2.5) drop-shadow(0 0 6px rgba(255,255,255,0.5)); }
+  #forest-viz .tree-sil:hover { filter: brightness(1.6) drop-shadow(0 0 3px rgba(242,232,201,.4)); }
+  #forest-viz .tree-sil.highlighted { filter: brightness(2) drop-shadow(0 0 6px rgba(242,232,201,.6)); }
 
-  /* ---- Ground Truth Modal ---- */
+  /* ---- Ground Truth Modal — parchment card ---- */
   #gt-modal-overlay {
     display: none; position: fixed; inset: 0; z-index: 2000;
-    background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+    background: rgba(46,27,14,.55); backdrop-filter: blur(2px);
     align-items: center; justify-content: center;
   }
   #gt-modal-overlay.active { display: flex; }
   #gt-modal {
-    background: #11131a; border: 1px solid #1e2230; border-radius: 12px;
+    background: var(--parchment); border: 2px solid var(--wood-mid); border-radius: 8px;
     width: 340px; max-height: 85vh; overflow-y: auto;
-    font-family: 'JetBrains Mono', monospace; font-size: 13px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.6);
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    box-shadow: 0 8px 32px rgba(46,27,14,.4), inset 0 1px 0 rgba(255,255,255,.3);
   }
   #gt-modal-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 16px; border-bottom: 1px solid #1e2230;
+    padding: 14px 16px; border-bottom: 2px solid var(--parchment-deeper);
+    background: var(--wood-dark);
+    border-radius: 6px 6px 0 0;
   }
-  #gt-modal-header .gt-tree-title { font-weight: 700; color: #e4e8f0; font-size: 15px; }
+  #gt-modal-header .gt-tree-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700; color: var(--carved-text); font-size: 15px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,.4);
+  }
   #gt-modal-header .gt-tree-tier { font-size: 11px; margin-left: 8px; }
   #gt-modal-close {
-    background: none; border: none; color: #5a6070; font-size: 20px;
+    background: none; border: none; color: var(--carved-text-dim); font-size: 20px;
     cursor: pointer; padding: 0 4px; line-height: 1;
   }
-  #gt-modal-close:hover { color: #d0d4dc; }
+  #gt-modal-close:hover { color: var(--carved-text); }
 
-  .gt-section { padding: 12px 16px; border-bottom: 1px solid #1e2230; }
+  .gt-section { padding: 12px 16px; border-bottom: 1px solid var(--parchment-deeper); }
   .gt-section:last-child { border-bottom: none; }
-  .gt-section-label { font-size: 10px; text-transform: uppercase; color: #5a6070; letter-spacing: .08em; margin-bottom: 8px; }
+  .gt-section-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 10px; text-transform: uppercase; color: var(--ink-light);
+    letter-spacing: .1em; margin-bottom: 8px;
+  }
 
   .gt-nav-grid { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
   .gt-nav-stats { display: flex; flex-direction: column; gap: 6px; }
   .gt-row { display: flex; justify-content: space-between; align-items: center; }
-  .gt-label { font-size: 11px; color: #5a6070; }
-  .gt-value { font-size: 13px; font-weight: 700; color: #e4e8f0; }
-  .gt-value.bearing { color: #6dce70; }
+  .gt-label { font-size: 11px; color: var(--ink-light); }
+  .gt-value { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .gt-value.bearing { color: var(--forest); }
 
   .gt-compass {
     width: 72px; height: 72px;
     position: relative; border-radius: 50%;
-    border: 2px solid #2a2e3a; background: #0c0e13; flex-shrink: 0;
+    border: 2px solid var(--wood-mid); background: var(--parchment-dark); flex-shrink: 0;
   }
   .gt-compass-needle {
     position: absolute; top: 50%; left: 50%;
-    width: 2px; height: 28px; background: #6dce70;
+    width: 2px; height: 28px; background: var(--forest);
     transform-origin: bottom center; border-radius: 1px;
   }
-  .gt-compass-n { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #ff4444; font-weight: 700; }
-  .gt-compass-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 6px; height: 6px; border-radius: 50%; background: #d0d4dc; }
+  .gt-compass-n { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 9px; color: var(--accent-red); font-weight: 700; }
+  .gt-compass-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 6px; height: 6px; border-radius: 50%; background: var(--wood-dark); }
 
   .gt-gps-btn {
     margin-top: 8px; width: 100%; padding: 7px;
-    background: #1e2230; color: #8a90a0; border: 1px solid #2a2e3a; border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--parchment-dark); color: var(--ink-light); border: 1px solid var(--parchment-deeper); border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
     cursor: pointer; transition: background .15s;
   }
-  .gt-gps-btn:hover { background: #2a2e3a; }
-  .gt-gps-btn.located { border-color: #3d8b40; color: #6dce70; }
+  .gt-gps-btn:hover { background: var(--parchment-deeper); }
+  .gt-gps-btn.located { border-color: var(--forest); color: var(--forest); }
 
-  .gt-form { background: #181b24; border-radius: 6px; padding: 12px; }
-  .gt-form label { display: block; font-size: 11px; color: #5a6070; margin-bottom: 3px; margin-top: 8px; }
+  .gt-form { background: var(--parchment-dark); border-radius: 4px; padding: 12px; border: 1px solid var(--parchment-deeper); }
+  .gt-form label { display: block; font-size: 11px; color: var(--ink-light); margin-bottom: 3px; margin-top: 8px; }
   .gt-form label:first-child { margin-top: 0; }
   .gt-form input {
-    width: 100%; padding: 6px 8px; border-radius: 4px;
-    border: 1px solid #2a2e3a; background: #0c0e13; color: #e4e8f0;
-    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    width: 100%; padding: 6px 8px; border-radius: 3px;
+    border: 1px solid var(--parchment-deeper); background: var(--parchment); color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
   }
-  .gt-form input:focus { outline: none; border-color: #3d8b40; }
+  .gt-form input:focus { outline: none; border-color: var(--forest); }
   .gt-form .gt-calc-btn {
     margin-top: 12px; width: 100%; padding: 8px;
-    background: #3d8b40; color: #fff; border: none; border-radius: 6px;
-    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: var(--forest); color: #fff; border: none; border-radius: 4px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
     font-weight: 700; cursor: pointer; transition: background .15s;
   }
-  .gt-form .gt-calc-btn:hover { background: #4da650; }
-  .gt-form .gt-calc-btn:disabled { background: #2a2e3a; color: #5a6070; cursor: default; }
+  .gt-form .gt-calc-btn:hover { background: var(--forest-light); }
+  .gt-form .gt-calc-btn:disabled { background: var(--parchment-deeper); color: var(--ink-light); cursor: default; }
 
-  .gt-result { background: #1a2420; border: 1px solid #3d8b40; border-radius: 6px; padding: 12px; margin-top: 10px; }
+  .gt-result { background: #E8F0E4; border: 1px solid var(--forest); border-radius: 4px; padding: 12px; margin-top: 10px; }
   .gt-result-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
   .gt-result-row:last-child { margin-bottom: 0; }
-  .gt-result-label { font-size: 11px; color: #6dce70; }
-  .gt-result-value { font-size: 13px; font-weight: 700; color: #e4e8f0; }
+  .gt-result-label { font-size: 11px; color: var(--forest); }
+  .gt-result-value { font-size: 13px; font-weight: 700; color: var(--ink); }
   .gt-result-delta { font-size: 12px; font-weight: 700; }
-  .gt-result-delta.close { color: #6dce70; }
-  .gt-result-delta.off { color: #ff8800; }
-  .gt-result-delta.far { color: #ff4444; }
+  .gt-result-delta.close { color: var(--forest); }
+  .gt-result-delta.off { color: var(--accent-orange); }
+  .gt-result-delta.far { color: var(--accent-red); }
 
   /* ---- Mode tab toggle ---- */
   .gt-mode-tabs {
-    display: flex; gap: 0; background: #0c0e13; border: 1px solid #2a2e3a;
-    border-radius: 6px; overflow: hidden; margin-bottom: 10px;
+    display: flex; gap: 0; background: var(--parchment); border: 1px solid var(--parchment-deeper);
+    border-radius: 4px; overflow: hidden; margin-bottom: 10px;
   }
   .gt-mode-tab {
     flex: 1; padding: 6px 0; text-align: center; cursor: pointer;
-    font-size: 11px; font-weight: 600; color: #5a6070;
+    font-size: 11px; font-weight: 600; color: var(--ink-light);
     background: none; border: none;
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     transition: background .15s, color .15s;
   }
-  .gt-mode-tab.active { background: #1e2230; color: #e4e8f0; }
+  .gt-mode-tab.active { background: var(--wood-dark); color: var(--carved-text); }
 
   /* ---- Survival mode ---- */
   .sv-sub-label {
-    font-size: 10px; text-transform: uppercase; color: #3d8b40;
+    font-size: 10px; text-transform: uppercase; color: var(--forest);
     letter-spacing: .08em; margin: 10px 0 6px;
+    font-family: 'Playfair Display', serif;
   }
   .sv-sub-label:first-child { margin-top: 0; }
   .sv-hint {
-    font-size: 10px; color: #3a3f50; line-height: 1.5; margin-bottom: 8px;
+    font-size: 10px; color: var(--ink-light); line-height: 1.5; margin-bottom: 8px;
+    font-family: 'Source Serif 4', serif;
   }
   .sv-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .sv-ratio {
-    font-size: 11px; color: #5a6070; text-align: center;
-    margin-top: 4px; padding: 4px; background: #0c0e13; border-radius: 4px;
+    font-size: 11px; color: var(--ink-light); text-align: center;
+    margin-top: 4px; padding: 4px; background: var(--parchment); border-radius: 3px;
+    border: 1px solid var(--parchment-deeper);
   }
-  .sv-ratio span { color: #6dce70; font-weight: 700; }
+  .sv-ratio span { color: var(--forest); font-weight: 700; }
 
-  /* Ranger beads */
+  /* Ranger beads — wooden bead look */
   .sv-beads-row { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
-  .sv-beads-label { font-size: 10px; color: #5a6070; width: 36px; flex-shrink: 0; }
+  .sv-beads-label { font-size: 10px; color: var(--ink-light); width: 36px; flex-shrink: 0; }
   .sv-beads { display: flex; gap: 5px; flex: 1; }
   .sv-bead {
     width: 22px; height: 22px; border-radius: 50%;
-    background: #1e2230; border: 2px solid #2a2e3a;
+    background: var(--parchment-dark); border: 2px solid var(--parchment-deeper);
     cursor: pointer; flex-shrink: 0; transition: background .1s, border-color .1s;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
   }
-  .sv-bead.active { background: #e4e8f0; border-color: #e4e8f0; }
-  .sv-bead.upper.active { background: #6dce70; border-color: #6dce70; }
+  .sv-bead.active { background: var(--wood-mid); border-color: var(--wood-dark); box-shadow: inset 0 1px 2px rgba(0,0,0,.2); }
+  .sv-bead.upper.active { background: var(--forest); border-color: var(--forest); }
   .sv-beads-reset {
     font-size: 18px; line-height: 1; background: none; border: none;
-    color: #3a3f50; cursor: pointer; padding: 2px 4px;
+    color: var(--ink-light); cursor: pointer; padding: 2px 4px;
   }
-  .sv-beads-reset:hover { color: #8a90a0; }
+  .sv-beads-reset:hover { color: var(--ink); }
   .sv-pace-display {
-    font-size: 11px; color: #5a6070; background: #0c0e13;
-    border-radius: 4px; padding: 6px 8px; margin-top: 4px;
+    font-size: 11px; color: var(--ink-light); background: var(--parchment);
+    border-radius: 3px; padding: 6px 8px; margin-top: 4px;
     display: flex; justify-content: space-between;
+    border: 1px solid var(--parchment-deeper);
   }
-  .sv-pace-display span { color: #e4e8f0; font-weight: 700; }
+  .sv-pace-display span { color: var(--ink); font-weight: 700; }
 
   /* Locate button */
   .leaflet-control-locate a {
     display: flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; font-size: 18px; line-height: 30px;
-    color: #333; text-decoration: none;
+    color: var(--wood-dark); text-decoration: none;
   }
   .leaflet-control-locate a svg { width: 16px; height: 16px; }
-  .leaflet-control-locate.active a svg { color: #3d8b40; }
-  .leaflet-control-locate.error a svg { color: #ff4444; }
+  .leaflet-control-locate.active a svg { color: var(--forest); }
+  .leaflet-control-locate.error a svg { color: var(--accent-red); }
   @keyframes locate-spin { to { transform: rotate(360deg); } }
   .leaflet-control-locate a svg.spin { animation: locate-spin .8s linear infinite; }
 
-  /* Loading state */
+  /* Loading state — wooden sign chip */
   #loading {
     display:none;
     position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-    background:rgba(12,14,19,.9); color:#8090a0; padding:18px 28px;
-    border-radius:10px; font-family:'JetBrains Mono',monospace; font-size:13px;
+    background: var(--wood-dark); color: var(--carved-text); padding:18px 28px;
+    border-radius: 6px; font-family: 'Playfair Display', serif; font-size:14px;
     z-index:1000; pointer-events:none;
+    box-shadow: 0 4px 16px rgba(46,27,14,.5);
+    border: 1px solid var(--wood-highlight);
+    letter-spacing: .03em;
+    text-shadow: 1px 1px 2px rgba(0,0,0,.4);
   }
   #loading.active { display:block; }
 
-  /* Hint */
+  /* Hint — parchment tag */
   #hint {
     position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
-    background:rgba(12,14,19,.85); color:#6a7a8a; padding:8px 16px;
-    border-radius:8px; font-family:'JetBrains Mono',monospace; font-size:12px;
+    background: var(--wood-dark); color: var(--carved-text-dim); padding:8px 16px;
+    border-radius: 4px; font-family: 'Source Serif 4', serif; font-size:13px;
     z-index:999; pointer-events:none;
     transition: opacity .4s;
+    border: 1px solid var(--wood-highlight);
+    text-shadow: 1px 1px 1px rgba(0,0,0,.3);
+    letter-spacing: .02em;
   }
+
+  /* Scrollbar styling for sidebar on wood background */
+  #sidebar-body::-webkit-scrollbar { width: 6px; }
+  #sidebar-body::-webkit-scrollbar-track { background: var(--wood-dark); }
+  #sidebar-body::-webkit-scrollbar-thumb { background: var(--wood-light); border-radius: 3px; }
+
+  /* Modal scrollbar */
+  #gt-modal::-webkit-scrollbar { width: 6px; }
+  #gt-modal::-webkit-scrollbar-track { background: var(--parchment-dark); }
+  #gt-modal::-webkit-scrollbar-thumb { background: var(--parchment-deeper); border-radius: 3px; }
 </style>
 </head>
 <body>
@@ -618,27 +712,122 @@ map.on('click', async (e) => {
   }
 });
 
-// ---- Tree silhouette definitions (PNW conifers) ----
+// ---- Tree silhouette definitions (PNW conifers — botanical line-drawing style) ----
+// These use stroke-only paths to create sparse, pen-and-ink botanical illustration feel
+// instead of solid filled silhouettes. Each tree is drawn as a trunk + individual branch strokes.
 const TREE_SILHOUETTES = [
-  { // Douglas Fir — conical, slightly irregular, drooping lower branches
-    id: 'sil-0', vb: '0 0 40 100',
-    path: 'M20 0 L17 12 L12 14 L15 20 L9 24 L13 30 L7 35 L11 40 L5 46 L10 50 L4 56 L9 60 L3 67 L8 72 L2 78 L7 82 L3 88 L17 90 L17 100 L23 100 L23 90 L37 88 L33 82 L38 78 L32 72 L37 67 L31 60 L36 56 L30 50 L35 46 L29 40 L33 35 L27 30 L31 24 L25 20 L28 14 L23 12 Z'
+  { // Douglas Fir — conical, sparse drooping branch strokes
+    id: 'sil-0', vb: '0 0 40 100', style: 'botanical',
+    paths: [
+      // Trunk
+      'M20 5 L20 100', // central stem
+      'M19 95 L21 95', // base widening
+      // Branches — sparse pairs, drooping slightly
+      'M20 12 L12 16', 'M20 12 L28 16',
+      'M20 20 L10 26', 'M20 20 L30 26',
+      'M20 28 L8 36',  'M20 28 L32 36',
+      'M20 36 L7 46',  'M20 36 L33 46',
+      'M20 45 L5 56',  'M20 45 L35 56',
+      'M20 55 L4 67',  'M20 55 L36 67',
+      'M20 65 L6 77',  'M20 65 L34 77',
+      'M20 75 L8 85',  'M20 75 L32 85',
+      // Leader tip
+      'M20 5 L19 8', 'M20 5 L21 9',
+      // Sparse needle tufts (short sub-branches)
+      'M14 20 L11 22', 'M26 20 L29 22',
+      'M12 32 L9 34',  'M28 32 L31 34',
+      'M10 42 L7 44',  'M30 42 L33 44',
+    ]
   },
-  { // Western Red Cedar — narrow pyramidal, buttressed trunk, drooping branches
-    id: 'sil-1', vb: '0 0 36 100',
-    path: 'M18 0 L16 10 L11 16 L14 22 L8 30 L12 35 L6 44 L10 48 L4 57 L9 62 L3 70 L8 74 L4 82 L14 88 L12 92 L12 100 L24 100 L24 92 L22 88 L32 82 L28 74 L33 70 L27 62 L32 57 L26 48 L30 44 L24 35 L28 30 L22 22 L25 16 L20 10 Z'
+  { // Western Red Cedar — narrow pyramidal, drooping frond-like branches
+    id: 'sil-1', vb: '0 0 36 100', style: 'botanical',
+    paths: [
+      // Trunk (slightly flared base)
+      'M18 4 L17 100', 'M18 4 L19 100',
+      'M15 95 L21 95',
+      // Drooping branches — curve downward
+      'M18 14 Q12 14 10 20', 'M18 14 Q24 14 26 20',
+      'M18 24 Q10 24 6 34', 'M18 24 Q26 24 30 34',
+      'M18 34 Q8 34 4 48', 'M18 34 Q28 34 32 48',
+      'M18 46 Q7 46 3 62', 'M18 46 Q29 46 33 62',
+      'M18 58 Q8 58 5 72', 'M18 58 Q28 58 31 72',
+      'M18 70 Q10 70 7 82', 'M18 70 Q26 70 29 82',
+      'M18 80 Q13 80 10 88', 'M18 80 Q23 80 26 88',
+      // Drooping tip
+      'M18 4 Q17 2 16 5',
+      // Sub-fronds
+      'M8 28 Q6 30 5 34', 'M28 28 Q30 30 31 34',
+      'M6 44 Q4 48 3 52', 'M30 44 Q32 48 33 52',
+    ]
   },
-  { // Sitka Spruce — broad conical, dense branching
-    id: 'sil-2', vb: '0 0 50 100',
-    path: 'M25 0 L22 8 L16 12 L19 18 L12 24 L16 28 L8 35 L13 38 L5 46 L11 50 L3 58 L9 62 L2 70 L8 74 L1 82 L10 86 L5 90 L18 93 L18 100 L32 100 L32 93 L45 90 L40 86 L49 82 L42 74 L48 70 L41 62 L47 58 L39 50 L45 46 L37 38 L42 35 L34 28 L38 24 L31 18 L34 12 L28 8 Z'
+  { // Sitka Spruce — broad conical, dense branching, ascending then drooping
+    id: 'sil-2', vb: '0 0 50 100', style: 'botanical',
+    paths: [
+      // Trunk
+      'M25 3 L24 100', 'M25 3 L26 100',
+      'M22 96 L28 96',
+      // Branches — broader spread
+      'M25 10 L16 14', 'M25 10 L34 14',
+      'M25 18 L12 24', 'M25 18 L38 24',
+      'M25 26 L8 35',  'M25 26 L42 35',
+      'M25 34 L6 46',  'M25 34 L44 46',
+      'M25 44 L4 57',  'M25 44 L46 57',
+      'M25 54 L3 68',  'M25 54 L47 68',
+      'M25 64 L5 78',  'M25 64 L45 78',
+      'M25 74 L8 86',  'M25 74 L42 86',
+      'M25 84 L12 92', 'M25 84 L38 92',
+      // Sub-branches for fullness
+      'M16 14 L13 17', 'M34 14 L37 17',
+      'M8 35 L5 39',   'M42 35 L45 39',
+      'M4 57 L2 62',   'M46 57 L48 62',
+      // Tip
+      'M25 3 L24 6', 'M25 3 L26 7',
+    ]
   },
-  { // Western Hemlock — drooping leader tip, delicate feathery crown
-    id: 'sil-3', vb: '0 0 38 100',
-    path: 'M16 0 L18 3 L19 1 L19 6 L15 12 L18 16 L12 22 L16 26 L10 33 L14 37 L7 44 L12 48 L5 56 L10 60 L4 68 L9 72 L3 80 L8 84 L4 90 L16 93 L16 100 L22 100 L22 93 L34 90 L30 84 L35 80 L29 72 L34 68 L28 60 L33 56 L26 48 L31 44 L24 37 L28 33 L22 26 L26 22 L20 16 L23 12 L19 6 Z'
+  { // Western Hemlock — graceful drooping leader tip, delicate
+    id: 'sil-3', vb: '0 0 38 100', style: 'botanical',
+    paths: [
+      // Trunk
+      'M19 8 L18 100', 'M19 8 L20 100',
+      'M16 96 L22 96',
+      // Distinctive drooping leader
+      'M19 0 Q16 3 15 7', 'M19 0 Q17 2 19 8',
+      // Branches — feathery, slightly drooping
+      'M19 16 Q13 16 10 22', 'M19 16 Q25 16 28 22',
+      'M19 26 Q11 26 7 34', 'M19 26 Q27 26 31 34',
+      'M19 36 Q9 36 5 46', 'M19 36 Q29 36 33 46',
+      'M19 48 Q8 48 4 58', 'M19 48 Q30 48 34 58',
+      'M19 58 Q7 58 3 70', 'M19 58 Q31 58 35 70',
+      'M19 70 Q10 70 6 80', 'M19 70 Q28 70 32 80',
+      'M19 80 Q12 80 9 88', 'M19 80 Q26 80 29 88',
+      // Fine sub-branches
+      'M10 22 Q8 24 7 28', 'M28 22 Q30 24 31 28',
+      'M5 46 Q3 50 2 54', 'M33 46 Q35 50 36 54',
+    ]
   },
-  { // Noble Fir — symmetrical narrow spire
-    id: 'sil-4', vb: '0 0 34 100',
-    path: 'M17 0 L15 10 L11 15 L14 20 L10 27 L13 31 L9 38 L12 42 L8 50 L11 54 L7 62 L10 66 L6 74 L9 78 L5 86 L14 90 L14 100 L20 100 L20 90 L29 86 L25 78 L28 74 L24 66 L27 62 L23 54 L26 50 L22 42 L25 38 L21 31 L24 27 L20 20 L23 15 L19 10 Z'
+  { // Noble Fir — symmetrical narrow spire, horizontal branches
+    id: 'sil-4', vb: '0 0 34 100', style: 'botanical',
+    paths: [
+      // Trunk
+      'M17 4 L17 100',
+      'M15 96 L19 96',
+      // Branches — nearly horizontal, very regular spacing
+      'M17 12 L12 14', 'M17 12 L22 14',
+      'M17 20 L10 23', 'M17 20 L24 23',
+      'M17 28 L9 32',  'M17 28 L25 32',
+      'M17 36 L8 41',  'M17 36 L26 41',
+      'M17 44 L7 50',  'M17 44 L27 50',
+      'M17 52 L6 59',  'M17 52 L28 59',
+      'M17 60 L6 68',  'M17 60 L28 68',
+      'M17 68 L7 76',  'M17 68 L27 76',
+      'M17 76 L8 83',  'M17 76 L26 83',
+      'M17 84 L10 89', 'M17 84 L24 89',
+      // Tip
+      'M17 4 L16 7', 'M17 4 L18 7',
+      // Small sub-branches
+      'M9 32 L7 35',  'M25 32 L27 35',
+      'M6 59 L4 63',  'M28 59 L30 63',
+    ]
   },
 ];
 
@@ -652,15 +841,23 @@ function renderForest(trees, centerLat, centerLon) {
   const vizTrees = trees.slice(0, 200);
   if (!vizTrees.length) return;
 
-  // Inject silhouette symbols into defs
+  // Inject botanical line-drawing symbols into defs
   const defs = document.createElementNS(SVG_NS, 'defs');
   TREE_SILHOUETTES.forEach(s => {
     const sym = document.createElementNS(SVG_NS, 'symbol');
     sym.setAttribute('id', s.id);
     sym.setAttribute('viewBox', s.vb);
-    const p = document.createElementNS(SVG_NS, 'path');
-    p.setAttribute('d', s.path);
-    sym.appendChild(p);
+    // Botanical style: multiple stroke-only paths (no fill)
+    s.paths.forEach(d => {
+      const p = document.createElementNS(SVG_NS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', 'none');
+      p.setAttribute('stroke', 'inherit');
+      p.setAttribute('stroke-width', '1.2');
+      p.setAttribute('stroke-linecap', 'round');
+      p.setAttribute('stroke-linejoin', 'round');
+      sym.appendChild(p);
+    });
     defs.appendChild(sym);
   });
   svg.appendChild(defs);
@@ -691,7 +888,7 @@ function renderForest(trees, centerLat, centerLon) {
   ground.setAttribute('y1', GROUND_Y);
   ground.setAttribute('x2', FOREST_R);
   ground.setAttribute('y2', GROUND_Y);
-  ground.setAttribute('stroke', '#1e2230');
+  ground.setAttribute('stroke', 'rgba(242,232,201,.2)');
   ground.setAttribute('stroke-width', '1');
   svg.appendChild(ground);
 
@@ -707,8 +904,8 @@ function renderForest(trees, centerLat, centerLon) {
     label.setAttribute('x', x);
     label.setAttribute('y', H - 2);
     label.setAttribute('text-anchor', 'middle');
-    label.setAttribute('fill', d === 'N' ? '#ff4444' : '#3a3f50');
-    label.setAttribute('font-family', "'JetBrains Mono', monospace");
+    label.setAttribute('fill', d === 'N' ? '#A0392B' : 'rgba(242,232,201,.35)');
+    label.setAttribute('font-family', "'Playfair Display', serif");
     label.setAttribute('font-size', '10');
     label.setAttribute('font-weight', d === 'N' ? '700' : '400');
     label.textContent = d;
@@ -738,10 +935,13 @@ function renderForest(trees, centerLat, centerLon) {
     const x = FOREST_L + xNorm * (FOREST_W - treePxW);
     const y = GROUND_Y - treePxH;
 
-    // Depth shading: shorter = lighter, taller = darker
+    // Depth shading: shorter = lighter/thinner, taller = darker/bolder
     const depthFactor = (t.height_m - minH) / (maxH - minH || 1);
-    const grey = Math.round(80 - depthFactor * 55); // 80 (light) to 25 (dark)
-    const fill = `rgb(${grey},${grey},${grey})`;
+    // Botanical ink tones: warm browns and greens on wood background
+    const r = Math.round(180 - depthFactor * 80);  // 180 → 100
+    const g = Math.round(160 - depthFactor * 80);  // 160 → 80
+    const b = Math.round(120 - depthFactor * 70);  // 120 → 50
+    const strokeColor = `rgb(${r},${g},${b})`;
 
     const use = document.createElementNS(SVG_NS, 'use');
     use.setAttribute('href', '#' + sil.id);
@@ -749,7 +949,8 @@ function renderForest(trees, centerLat, centerLon) {
     use.setAttribute('y', y);
     use.setAttribute('width', treePxW);
     use.setAttribute('height', treePxH);
-    use.setAttribute('fill', fill);
+    use.setAttribute('fill', 'none');
+    use.setAttribute('stroke', strokeColor);
     use.classList.add('tree-sil');
     use.dataset.rank = t.rank;
 
@@ -780,7 +981,7 @@ function drawForestScale(svg, maxH, pxPerMeter, groundY, offsetX, align, topPad)
   line.setAttribute('y1', groundY);
   line.setAttribute('x2', lineX);
   line.setAttribute('y2', topPad);
-  line.setAttribute('stroke', '#2a2e3a');
+  line.setAttribute('stroke', 'rgba(242,232,201,.2)');
   line.setAttribute('stroke-width', '1');
   g.appendChild(line);
 
@@ -795,7 +996,7 @@ function drawForestScale(svg, maxH, pxPerMeter, groundY, offsetX, align, topPad)
     tick.setAttribute('y1', y);
     tick.setAttribute('x2', lineX + tickDir * 4);
     tick.setAttribute('y2', y);
-    tick.setAttribute('stroke', '#2a2e3a');
+    tick.setAttribute('stroke', 'rgba(242,232,201,.25)');
     tick.setAttribute('stroke-width', '1');
     g.appendChild(tick);
 
@@ -804,8 +1005,8 @@ function drawForestScale(svg, maxH, pxPerMeter, groundY, offsetX, align, topPad)
     text.setAttribute('x', align === 'right' ? lineX - 6 : lineX + 8);
     text.setAttribute('y', y + 3);
     text.setAttribute('text-anchor', align === 'right' ? 'end' : 'start');
-    text.setAttribute('fill', '#3a3f50');
-    text.setAttribute('font-family', "'JetBrains Mono', monospace");
+    text.setAttribute('fill', 'rgba(242,232,201,.3)');
+    text.setAttribute('font-family', "'IBM Plex Mono', monospace");
     text.setAttribute('font-size', '9');
     text.textContent = useFeet ? Math.round(h * 3.28084) + 'ft' : h + 'm';
     g.appendChild(text);

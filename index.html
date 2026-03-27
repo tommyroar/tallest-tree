@@ -206,6 +206,50 @@
   }
   .gt-mode-tab.active { background: #1e2230; color: #e4e8f0; }
 
+  /* ---- AR Camera Overlay ---- */
+  #ar-camera-overlay {
+    display: none; position: fixed; inset: 0; z-index: 3000;
+    background: #000; flex-direction: column;
+  }
+  #ar-camera-overlay.active { display: flex; }
+  #ar-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.75; }
+  #ar-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #ar-close-btn {
+    position: absolute; top: 16px; right: 16px; z-index: 10;
+    background: rgba(0,0,0,.65); border: 1px solid #2d3347; color: #d0d4dc;
+    border-radius: 50%; width: 36px; height: 36px; font-size: 20px; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  #ar-controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px 28px;
+    background: linear-gradient(transparent, rgba(0,0,0,.88));
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  #ar-sensor-msg { font-size: 10px; color: #5a6070; text-align: center; min-height: 14px; }
+  .ar-lock-row { display: flex; gap: 8px; }
+  .ar-lock-btn {
+    flex: 1; padding: 10px 8px; border-radius: 6px; border: 1px solid #2d3347;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    background: #1e2230; color: #d0d4dc; transition: background .15s, border-color .15s;
+  }
+  .ar-lock-btn:hover { background: #2a2e3a; }
+  .ar-lock-btn.locked-crown { border-color: #3d8b40; color: #6dce70; }
+  .ar-lock-btn.locked-base { border-color: #995500; color: #ff8800; }
+  .ar-angles-row { display: flex; justify-content: center; gap: 32px; }
+  .ar-angle-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .ar-angle-label { font-size: 10px; color: #5a6070; text-transform: uppercase; letter-spacing: .06em; }
+  .ar-angle-value { font-size: 15px; font-weight: 700; color: #e4e8f0; font-family: 'JetBrains Mono', monospace; }
+  .ar-angle-value.set-crown { color: #6dce70; }
+  .ar-angle-value.set-base { color: #ff8800; }
+  .ar-apply-btn {
+    width: 100%; padding: 11px; border-radius: 6px; border: none;
+    background: #3d8b40; color: #fff; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: background .15s;
+  }
+  .ar-apply-btn:hover { background: #4da650; }
+  .ar-apply-btn:disabled { background: #2a2e3a; color: #5a6070; cursor: default; }
+
   /* ---- Survival mode ---- */
   .sv-sub-label {
     font-size: 10px; text-transform: uppercase; color: #3d8b40;
@@ -332,6 +376,7 @@
       <div class="gt-mode-tabs">
         <button class="gt-mode-tab active" id="tab-rangefinder" onclick="setMeasureMode('rangefinder')">Rangefinder</button>
         <button class="gt-mode-tab" id="tab-survival" onclick="setMeasureMode('survival')">Survival</button>
+        <button class="gt-mode-tab" id="tab-ar" onclick="setMeasureMode('ar')">AR Assist</button>
       </div>
 
       <!-- Rangefinder form -->
@@ -397,8 +442,56 @@
         </div>
       </div>
 
+      <!-- AR Assist form -->
+      <div id="gt-form-ar" style="display:none">
+        <div class="gt-form">
+          <p style="font-size:11px; color:#5a6070; line-height:1.55; margin-bottom:10px;">Point your camera at the tree crown and tap <strong style="color:#d0d4dc;">Lock Crown</strong>, then aim at the base and tap <strong style="color:#d0d4dc;">Lock Base</strong>. The clinometer reads your device's tilt sensor.</p>
+          <button class="gt-calc-btn" onclick="openARCamera()">Open Camera Clinometer</button>
+          <div id="ar-result-preview" style="display:none; margin-top:8px;">
+            <div class="gt-result-row">
+              <span class="gt-label">Crown angle</span>
+              <span class="gt-value" id="ar-crown-preview" style="color:#6dce70;">—</span>
+            </div>
+            <div class="gt-result-row">
+              <span class="gt-label">Base angle</span>
+              <span class="gt-value" id="ar-base-preview" style="color:#ff8800;">—</span>
+            </div>
+            <div style="font-size:10px; color:#5a6070; margin-top:4px;">Angles applied — enter distance in Rangefinder to calculate height.</div>
+          </div>
+        </div>
+      </div>
+
       <div id="gt-result"></div>
     </div>
+  </div>
+</div>
+
+<!-- AR Camera Clinometer overlay -->
+<div id="ar-camera-overlay">
+  <video id="ar-video" autoplay playsinline muted></video>
+  <canvas id="ar-canvas"></canvas>
+  <button id="ar-close-btn" onclick="closeARCamera()">&times;</button>
+  <div id="ar-controls">
+    <div id="ar-sensor-msg"></div>
+    <div class="ar-lock-row">
+      <button class="ar-lock-btn" id="ar-btn-crown" onclick="arLockCrown()">&#x2B06; Lock Crown</button>
+      <button class="ar-lock-btn" id="ar-btn-base" onclick="arLockBase()">&#x2B07; Lock Base</button>
+    </div>
+    <div class="ar-angles-row">
+      <div class="ar-angle-item">
+        <span class="ar-angle-label">Crown</span>
+        <span class="ar-angle-value" id="ar-crown-val">—</span>
+      </div>
+      <div class="ar-angle-item">
+        <span class="ar-angle-label">Live</span>
+        <span class="ar-angle-value" id="ar-live-val">0.0°</span>
+      </div>
+      <div class="ar-angle-item">
+        <span class="ar-angle-label">Base</span>
+        <span class="ar-angle-value" id="ar-base-val">—</span>
+      </div>
+    </div>
+    <button class="ar-apply-btn" id="ar-apply-btn" onclick="arApplyAngles()" disabled>Apply Angles to Rangefinder</button>
   </div>
 </div>
 
@@ -859,6 +952,9 @@ function openGtModal(tree) {
 
   // Reset measurement form
   document.getElementById('gt-result').innerHTML = '';
+  document.getElementById('ar-result-preview').style.display = 'none';
+  arCrownAngle = null;
+  arBaseAngle = null;
   initBeads();
   updateSvRatio();
 
@@ -869,6 +965,7 @@ function openGtModal(tree) {
 function closeGtModal() {
   document.getElementById('gt-modal-overlay').classList.remove('active');
   if (gtLineLayer) { map.removeLayer(gtLineLayer); gtLineLayer = null; }
+  closeARCamera();
 }
 
 function acquireGPS() {
@@ -1068,8 +1165,10 @@ function setMeasureMode(mode) {
   measureMode = mode;
   document.getElementById('tab-rangefinder').classList.toggle('active', mode === 'rangefinder');
   document.getElementById('tab-survival').classList.toggle('active', mode === 'survival');
+  document.getElementById('tab-ar').classList.toggle('active', mode === 'ar');
   document.getElementById('gt-form-rangefinder').style.display = mode === 'rangefinder' ? '' : 'none';
   document.getElementById('gt-form-survival').style.display = mode === 'survival' ? '' : 'none';
+  document.getElementById('gt-form-ar').style.display = mode === 'ar' ? '' : 'none';
   document.getElementById('gt-result').innerHTML = '';
 }
 
@@ -1195,7 +1294,248 @@ function calculateSurvivalHeight() {
 }
 
 // Close modal on Escape
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGtModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeARCamera(); closeGtModal(); } });
+
+// ---- AR Camera Clinometer ----
+let arStream = null;
+let arAnimFrame = null;
+let arCrownAngle = null;
+let arBaseAngle = null;
+let arCurrentAngle = 0;
+
+function openARCamera() {
+  arCrownAngle = null;
+  arBaseAngle = null;
+  arCurrentAngle = 0;
+  updateAROverlayDisplay();
+
+  const overlay = document.getElementById('ar-camera-overlay');
+  overlay.classList.add('active');
+  document.getElementById('ar-sensor-msg').textContent = '';
+  document.getElementById('ar-live-val').textContent = '0.0°';
+
+  // Camera
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false })
+      .then(stream => {
+        arStream = stream;
+        document.getElementById('ar-video').srcObject = stream;
+      })
+      .catch(() => {
+        document.getElementById('ar-sensor-msg').textContent = 'Camera unavailable — angle sensor only';
+      });
+  } else {
+    document.getElementById('ar-sensor-msg').textContent = 'Camera not supported — angle sensor only';
+  }
+
+  // Device orientation (iOS 13+ requires explicit permission)
+  const attachOrientation = () => {
+    window.addEventListener('deviceorientation', handleAROrientation, { passive: true });
+  };
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission()
+      .then(p => {
+        if (p === 'granted') attachOrientation();
+        else document.getElementById('ar-sensor-msg').textContent = 'Orientation permission denied';
+      })
+      .catch(() => {
+        document.getElementById('ar-sensor-msg').textContent = 'Orientation sensor unavailable';
+      });
+  } else {
+    attachOrientation();
+  }
+
+  startARDraw();
+}
+
+function handleAROrientation(e) {
+  if (e.beta !== null) {
+    // beta=0: flat on table. beta=90: upright portrait. inclination = beta - 90.
+    arCurrentAngle = parseFloat((e.beta - 90).toFixed(1));
+    document.getElementById('ar-live-val').textContent =
+      (arCurrentAngle >= 0 ? '+' : '') + arCurrentAngle.toFixed(1) + '°';
+  }
+}
+
+function closeARCamera() {
+  if (arStream) {
+    arStream.getTracks().forEach(t => t.stop());
+    arStream = null;
+    const vid = document.getElementById('ar-video');
+    if (vid) vid.srcObject = null;
+  }
+  if (arAnimFrame) { cancelAnimationFrame(arAnimFrame); arAnimFrame = null; }
+  window.removeEventListener('deviceorientation', handleAROrientation);
+  const overlay = document.getElementById('ar-camera-overlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function startARDraw() {
+  const canvas = document.getElementById('ar-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function draw() {
+    const W = canvas.width = canvas.offsetWidth || 320;
+    const H = canvas.height = canvas.offsetHeight || 568;
+    ctx.clearRect(0, 0, W, H);
+
+    const angle = arCurrentAngle;
+    const cx = W / 2;
+    const cy = H / 2;
+    const PX_PER_DEG = Math.max(3, Math.min(5, H / 80));
+
+    // Horizon line (at angle = 0)
+    const horizY = cy + angle * PX_PER_DEG;
+    if (horizY >= 0 && horizY <= H) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,136,0,0.5)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath(); ctx.moveTo(0, horizY); ctx.lineTo(W, horizY); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // Angle scale on right edge
+    const scaleX = W - 50;
+    for (let deg = -60; deg <= 90; deg += 5) {
+      const y = cy - (deg - angle) * PX_PER_DEG;
+      if (y < 0 || y > H) continue;
+      const isMajor = deg % 10 === 0;
+      ctx.strokeStyle = deg === 0 ? 'rgba(255,136,0,0.85)' : 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = isMajor ? 1.5 : 1;
+      ctx.beginPath();
+      ctx.moveTo(scaleX, y); ctx.lineTo(scaleX + (isMajor ? 20 : 10), y);
+      ctx.stroke();
+      if (isMajor) {
+        ctx.fillStyle = 'rgba(255,255,255,0.75)';
+        ctx.font = '10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText(deg + '°', scaleX - 4, y + 3.5);
+      }
+    }
+
+    // Crosshair (gap in center)
+    ctx.strokeStyle = 'rgba(109,206,112,0.9)';
+    ctx.lineWidth = 1.5;
+    const cl = 32, gap = 9;
+    ctx.beginPath();
+    ctx.moveTo(cx - cl, cy); ctx.lineTo(cx - gap, cy);
+    ctx.moveTo(cx + gap, cy); ctx.lineTo(cx + cl, cy);
+    ctx.moveTo(cx, cy - cl); ctx.lineTo(cx, cy - gap);
+    ctx.moveTo(cx, cy + gap); ctx.lineTo(cx, cy + cl);
+    ctx.stroke();
+    // Center ring
+    ctx.beginPath(); ctx.arc(cx, cy, gap - 2, 0, Math.PI * 2); ctx.stroke();
+
+    // Current angle badge (top center)
+    const badgeW = 78, badgeH = 26;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath();
+    ctx.rect(cx - badgeW / 2, 14, badgeW, badgeH);
+    ctx.fill();
+    ctx.fillStyle = '#6dce70';
+    ctx.font = 'bold 15px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText((angle >= 0 ? '+' : '') + angle.toFixed(1) + '°', cx, 32);
+
+    // Locked crown reference line
+    if (arCrownAngle !== null) {
+      const ly = cy - (arCrownAngle - angle) * PX_PER_DEG;
+      if (ly >= 0 && ly <= H) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(109,206,112,0.75)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(scaleX - 8, ly); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(109,206,112,0.95)';
+        ctx.font = '10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('\u25b2' + arCrownAngle.toFixed(1) + '\u00b0', 6, ly - 3);
+        ctx.restore();
+      }
+    }
+
+    // Locked base reference line
+    if (arBaseAngle !== null) {
+      const ly = cy - (arBaseAngle - angle) * PX_PER_DEG;
+      if (ly >= 0 && ly <= H) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,136,0,0.75)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(scaleX - 8, ly); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(255,136,0,0.95)';
+        ctx.font = '10px "JetBrains Mono", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText('\u25bc' + arBaseAngle.toFixed(1) + '\u00b0', 6, ly + 12);
+        ctx.restore();
+      }
+    }
+
+    arAnimFrame = requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function updateAROverlayDisplay() {
+  const crownEl = document.getElementById('ar-crown-val');
+  const baseEl = document.getElementById('ar-base-val');
+  const applyBtn = document.getElementById('ar-apply-btn');
+  const crownBtn = document.getElementById('ar-btn-crown');
+  const baseBtn = document.getElementById('ar-btn-base');
+
+  if (arCrownAngle !== null) {
+    crownEl.textContent = (arCrownAngle >= 0 ? '+' : '') + arCrownAngle.toFixed(1) + '\u00b0';
+    crownEl.className = 'ar-angle-value set-crown';
+    crownBtn.classList.add('locked-crown');
+  } else {
+    crownEl.textContent = '\u2014';
+    crownEl.className = 'ar-angle-value';
+    crownBtn.classList.remove('locked-crown');
+  }
+
+  if (arBaseAngle !== null) {
+    baseEl.textContent = (arBaseAngle >= 0 ? '+' : '') + arBaseAngle.toFixed(1) + '\u00b0';
+    baseEl.className = 'ar-angle-value set-base';
+    baseBtn.classList.add('locked-base');
+  } else {
+    baseEl.textContent = '\u2014';
+    baseEl.className = 'ar-angle-value';
+    baseBtn.classList.remove('locked-base');
+  }
+
+  applyBtn.disabled = (arCrownAngle === null || arBaseAngle === null);
+}
+
+function arLockCrown() {
+  arCrownAngle = arCurrentAngle;
+  updateAROverlayDisplay();
+}
+
+function arLockBase() {
+  arBaseAngle = arCurrentAngle;
+  updateAROverlayDisplay();
+}
+
+function arApplyAngles() {
+  if (arCrownAngle === null || arBaseAngle === null) return;
+  closeARCamera();
+  // Fill rangefinder angle fields
+  document.getElementById('gt-angle-top').value = arCrownAngle.toFixed(1);
+  document.getElementById('gt-angle-base').value = arBaseAngle.toFixed(1);
+  // Show locked values in the AR form
+  document.getElementById('ar-crown-preview').textContent =
+    (arCrownAngle >= 0 ? '+' : '') + arCrownAngle.toFixed(1) + '\u00b0';
+  document.getElementById('ar-base-preview').textContent =
+    (arBaseAngle >= 0 ? '+' : '') + arBaseAngle.toFixed(1) + '\u00b0';
+  document.getElementById('ar-result-preview').style.display = '';
+  // Switch to rangefinder to complete measurement
+  setMeasureMode('rangefinder');
+}
 </script>
 </body>
 </html>

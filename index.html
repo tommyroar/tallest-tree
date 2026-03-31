@@ -275,6 +275,117 @@
     z-index:999; pointer-events:none;
     transition: opacity .4s;
   }
+
+  /* ---- Tree Info Popup ---- */
+  .tree-info-popup .leaflet-popup-content-wrapper {
+    background: #11131a;
+    border: 1px solid #1e2230;
+    border-radius: 12px;
+    color: #d0d4dc;
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    padding: 0;
+  }
+  .tree-info-popup .leaflet-popup-content {
+    margin: 0;
+    width: 280px !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+  .tree-info-popup .leaflet-popup-tip {
+    background: #11131a;
+    border: 1px solid #1e2230;
+    box-shadow: none;
+  }
+  .tree-info-popup .leaflet-popup-close-button {
+    color: #5a6070;
+    font-size: 20px;
+    padding: 6px 8px;
+    z-index: 1;
+  }
+  .tree-info-popup .leaflet-popup-close-button:hover { color: #d0d4dc; }
+
+  /* Header */
+  .tip-header {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e4e8f0;
+    padding: 12px 14px 8px;
+  }
+
+  /* Tier badge */
+  .tip-tier-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 0 14px 8px;
+    background: rgba(255,255,255,.08);
+  }
+
+  /* Data rows */
+  .tip-data {
+    padding: 0 14px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border-top: 1px solid #1e2230;
+    padding-top: 10px;
+  }
+  .tip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .tip-label {
+    font-size: 11px;
+    color: #5a6070;
+  }
+  .tip-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: #e4e8f0;
+  }
+
+  /* Action buttons area */
+  .tip-actions {
+    padding: 8px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid #1e2230;
+  }
+  .tip-gt-btn {
+    width: 100%;
+    padding: 8px;
+    background: #3d8b40;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .tip-gt-btn:hover { background: #4da650; }
+  .tip-flyback-btn {
+    display: none;
+    width: 100%;
+    padding: 7px;
+    background: #1e2230;
+    color: #8a90a0;
+    border: 1px solid #2a2e3a;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .tip-flyback-btn:hover { background: #2a2e3a; }
 </style>
 </head>
 <body>
@@ -420,6 +531,12 @@ function fmtH1(meters) {
   if (useFeet) return (meters * 3.28084).toFixed(1) + ' ft';
   return meters.toFixed(1) + ' m';
 }
+window.fmtH = fmtH;
+window.fmtH1 = fmtH1;
+Object.defineProperty(window, '_useFeet', {
+  get() { return useFeet; },
+  set(v) { useFeet = v; }
+});
 function setUnits(unit) {
   useFeet = (unit === 'ft');
   document.getElementById('btn-m').classList.toggle('active', !useFeet);
@@ -438,6 +555,10 @@ function refreshUnits() {
   if (gtSelectedTree) {
     document.getElementById('gt-title').textContent = `#${gtSelectedTree.rank} — ${fmtH(gtSelectedTree.height_m)}`;
     updateNavigation();
+  }
+  // Update tree info popup content if open
+  if (window._treeInfoPopup && window._treeInfoTree) {
+    window._treeInfoPopup.setContent(buildTreeInfoHTML(window._treeInfoTree, window._lastData.stats.n_trees));
   }
 }
 
@@ -836,10 +957,119 @@ function highlightTree(tree) {
   const sil = document.querySelector(`#forest-viz .tree-sil[data-rank="${tree.rank}"]`);
   if (sil) sil.classList.add('highlighted');
 
-  // Open ground truth modal
-  openGtModal(tree);
+  // Open tree info popup
+  openTreeInfoPopup(tree);
 }
 
+
+// ---- Tree Info Popup ----
+function buildTreeInfoHTML(tree, totalCount) {
+  const h = tree.height_m != null ? fmtH(tree.height_m) : '—';
+  const err = tree.error_m != null ? fmtH1(tree.error_m) : '—';
+  const tier = tree.tier || 'Unknown';
+  const colour = tree.colour || '#888';
+  const rank = tree.rank != null ? tree.rank : '—';
+  const total = totalCount != null ? totalCount : '—';
+  const lat = tree.lat != null ? tree.lat.toFixed(5) : '—';
+  const lon = tree.lon != null ? tree.lon.toFixed(5) : '—';
+
+  return `<div class="tip-header">#${rank} — ${h}</div>` +
+    `<span class="tip-tier-badge" style="color:${colour}">${tier}</span>` +
+    `<div class="tip-data">` +
+      `<div class="tip-row"><span class="tip-label">Height</span><span class="tip-value">${h} ±${err}</span></div>` +
+      `<div class="tip-row"><span class="tip-label">Tier</span><span class="tip-value">${tier}</span></div>` +
+      `<div class="tip-row"><span class="tip-label">Rank</span><span class="tip-value">#${rank} of ${total}</span></div>` +
+      `<div class="tip-row"><span class="tip-label">Coords</span><span class="tip-value">${lat}, ${lon}</span></div>` +
+    `</div>` +
+    `<div class="tip-actions">` +
+      `<button class="tip-gt-btn" style="background:#3d8b40">📐 Launch Ground Truth Mode</button>` +
+      `<button class="tip-flyback-btn" style="display:none">📍 Fly Back to Tree</button>` +
+    `</div>`;
+}
+window.buildTreeInfoHTML = buildTreeInfoHTML;
+
+// ---- Tree Info Popup: open / close / fly-back ----
+let _flyBackHandler = null;
+
+function closeTreeInfoPopup() {
+  if (window._treeInfoPopup) {
+    map.removeLayer(window._treeInfoPopup);
+    window._treeInfoPopup = null;
+  }
+  window._treeInfoTree = null;
+  if (_flyBackHandler) {
+    map.off('moveend', _flyBackHandler);
+    _flyBackHandler = null;
+  }
+}
+window.closeTreeInfoPopup = closeTreeInfoPopup;
+
+function updateFlyBackVisibility() {
+  if (!window._treeInfoPopup || !window._treeInfoTree) return;
+  const tree = window._treeInfoTree;
+  const btn = window._treeInfoPopup.getElement()
+    ? window._treeInfoPopup.getElement().querySelector('.tip-flyback-btn')
+    : null;
+  if (!btn) return;
+  const inView = map.getBounds().contains([tree.lat, tree.lon]);
+  btn.style.display = inView ? 'none' : 'block';
+}
+window.updateFlyBackVisibility = updateFlyBackVisibility;
+
+function openTreeInfoPopup(tree) {
+  closeTreeInfoPopup();
+  if (!window._lastData) return;
+
+  const popup = L.popup({
+    className: 'tree-info-popup',
+    maxWidth: 280,
+    minWidth: 280,
+    closeButton: true,
+    autoPan: true,
+  })
+    .setLatLng([tree.lat, tree.lon])
+    .setContent(buildTreeInfoHTML(tree, window._lastData.stats.n_trees))
+    .openOn(map);
+
+  window._treeInfoPopup = popup;
+  window._treeInfoTree = tree;
+
+  // Fly map to tree
+  map.flyTo([tree.lat, tree.lon], 16);
+
+  // Keyboard accessibility: focus close button
+  const popupEl = popup.getElement();
+  if (popupEl) {
+    const closeBtn = popupEl.querySelector('.leaflet-popup-close-button');
+    if (closeBtn) closeBtn.focus();
+  }
+
+  // Wire "Launch Ground Truth Mode" button
+  if (popupEl) {
+    const gtBtn = popupEl.querySelector('.tip-gt-btn');
+    if (gtBtn) {
+      gtBtn.addEventListener('click', () => {
+        closeTreeInfoPopup();
+        openGtModal(tree);
+      });
+    }
+  }
+
+  // Wire "Fly Back to Tree" button
+  if (popupEl) {
+    const flyBtn = popupEl.querySelector('.tip-flyback-btn');
+    if (flyBtn) {
+      flyBtn.addEventListener('click', () => {
+        map.flyTo([tree.lat, tree.lon], 16);
+      });
+    }
+  }
+
+  // Register moveend listener for fly-back visibility
+  _flyBackHandler = updateFlyBackVisibility;
+  map.on('moveend', _flyBackHandler);
+}
+window.openTreeInfoPopup = openTreeInfoPopup;
 
 // ---- Ground Truth Modal ----
 let gtUserPos = null;      // {lat, lon}
@@ -1194,8 +1424,13 @@ function calculateSurvivalHeight() {
   `;
 }
 
-// Close modal on Escape
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeGtModal(); });
+// Close popup or modal on Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (window._treeInfoPopup) { closeTreeInfoPopup(); }
+    else { closeGtModal(); }
+  }
+});
 </script>
 </body>
 </html>

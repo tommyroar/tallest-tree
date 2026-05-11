@@ -1,0 +1,59 @@
+# Cloudflare Worker fronting the Flask backend running in a container.
+#
+# Production: pushes to main deploy this top-level config.
+# Staging:    pushes to `staging` deploy the [env.staging] override.
+#
+# Edit the route patterns (and zone_name) to match the hostnames you set in
+# terraform/env/*.tfvars. The Pages site and this Worker route share the same
+# hostname — Cloudflare matches /api/* to this Worker first and falls through
+# to Pages for everything else.
+
+name = "tallest-tree-api"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Container image is built from the repo root Dockerfile by `wrangler deploy`,
+# pushed to Cloudflare's registry, and bound to the durable object below.
+[[containers]]
+class_name = "BackendContainer"
+image = "../Dockerfile"
+max_instances = 5
+instance_type = "basic"
+
+[[durable_objects.bindings]]
+name = "BACKEND"
+class_name = "BackendContainer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BackendContainer"]
+
+# Production route — replace tallesttree.example with your zone.
+[[routes]]
+pattern = "tallesttree.example/api/*"
+zone_name = "tallesttree.example"
+
+# -----------------------------------------------------------------------------
+# Staging
+# -----------------------------------------------------------------------------
+[env.staging]
+name = "tallest-tree-api-staging"
+
+[[env.staging.containers]]
+class_name = "BackendContainer"
+image = "../Dockerfile"
+max_instances = 2
+instance_type = "basic"
+
+[[env.staging.durable_objects.bindings]]
+name = "BACKEND"
+class_name = "BackendContainer"
+
+[[env.staging.migrations]]
+tag = "v1"
+new_sqlite_classes = ["BackendContainer"]
+
+[[env.staging.routes]]
+pattern = "staging.tallesttree.example/api/*"
+zone_name = "tallesttree.example"

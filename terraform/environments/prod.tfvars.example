@@ -1,0 +1,5 @@
+# Copy to prod.tfvars and fill in. prod.tfvars is gitignored.
+cloudflare_account_id = "REPLACE_WITH_ACCOUNT_ID"
+cloudflare_zone_id    = "REPLACE_WITH_ZONE_ID"
+prod_hostname         = "tallesttree.example"
+staging_hostname      = "staging.tallesttree.example"

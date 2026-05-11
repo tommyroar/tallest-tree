@@ -1,0 +1,100 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main      # → production
+      - staging   # → staging
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        type: choice
+        required: true
+        default: staging
+        options:
+          - staging
+          - production
+
+concurrency:
+  # One deploy per environment at a time; never cancel an in-flight rollout.
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve target environment
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            TARGET="${{ inputs.environment }}"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            TARGET="production"
+          else
+            TARGET="staging"
+          fi
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TARGET" == "production" ]]; then
+            echo "pages_project=${{ vars.PAGES_PROJECT_PROD || 'tallest-tree' }}" >> "$GITHUB_OUTPUT"
+            echo "wrangler_env_flag=" >> "$GITHUB_OUTPUT"
+            echo "pages_branch=main" >> "$GITHUB_OUTPUT"
+          else
+            echo "pages_project=${{ vars.PAGES_PROJECT_STAGING || 'tallest-tree-staging' }}" >> "$GITHUB_OUTPUT"
+            echo "wrangler_env_flag=--env staging" >> "$GITHUB_OUTPUT"
+            echo "pages_branch=staging" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: worker/package.json
+
+      - name: Install Worker tooling
+        working-directory: worker
+        run: npm install
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ---------------------------------------------------------------------
+      # Backend: Worker + container image
+      # ---------------------------------------------------------------------
+      # wrangler builds the Dockerfile, pushes the image to Cloudflare's
+      # container registry, applies durable object migrations, and updates the
+      # Worker code + routes — all in one command.
+      - name: Deploy backend Worker (${{ steps.env.outputs.target }})
+        working-directory: worker
+        run: npx wrangler deploy ${{ steps.env.outputs.wrangler_env_flag }}
+
+      # ---------------------------------------------------------------------
+      # Frontend: static files to Pages
+      # ---------------------------------------------------------------------
+      - name: Build Pages dist
+        run: ./scripts/build-pages.sh
+
+      - name: Deploy frontend to Cloudflare Pages
+        run: |
+          npx wrangler@4 pages deploy dist \
+            --project-name "${{ steps.env.outputs.pages_project }}" \
+            --branch "${{ steps.env.outputs.pages_branch }}" \
+            --commit-hash "${{ github.sha }}" \
+            --commit-message "${{ github.event.head_commit.message || github.sha }}"
+
+      - name: Summary
+        run: |
+          echo "### Deployed ${{ steps.env.outputs.target }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Pages project: \`${{ steps.env.outputs.pages_project }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Worker: \`tallest-tree-api${{ steps.env.outputs.target == 'staging' && '-staging' || '' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"

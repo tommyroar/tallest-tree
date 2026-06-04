@@ -47,3 +47,11 @@ node tests/test_smoke.js
 - `TIERS` — height classification: Common (<50m), Tall (50–70m), Regional (70–80m), National (80–90m), Global (≥90m)
 - `MAE = 2.8` — mean absolute error in metres for the CHM dataset
 - `QUADKEY_ZOOM = 9`, `TILE_PX = 65536` — tile grid parameters
+## Pull requests — the "newspaper" framework
+
+PR descriptions follow the **newspaper / information-pyramid** format: one self-contained
+front page (kicker → headline → dek → masthead → why → what → mermaid flow → screens →
+verification → risk) that reads top-to-bottom on an iPad-mini portrait display (1–2 pages;
+up to 4 for very complex *code* changes). Rebuild from the **full** diff, never append.
+Full rules: <https://github.com/tommyroar/.github/blob/main/PR_FRAMEWORK.md>. CI validates
+the body via the `pr-newspaper` workflow (the reusable gate in `tommyroar/pr-newspaper`).
